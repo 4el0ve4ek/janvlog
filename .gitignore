@@ -1,2 +1,4 @@
 janvlog
 *.ogg
+*.jsonl
+.DS_store

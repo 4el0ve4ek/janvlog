@@ -19,7 +19,7 @@ func NewRoomListener(roomID float64, handle *janus.Handle, jc *jc) *roomListener
 		jc:           jc,
 		closer:       NewCloser(),
 		wg:           &sync.WaitGroup{},
-		lw:           must(NewLogWriter("room-" + strconv.Itoa(int(roomID)))),
+		lw:           must(NewLogWriter("room-" + strconv.Itoa(int(roomID)) + "_" + strconv.Itoa(int(time.Now().Unix())))),
 	}
 
 	ret.wg.Add(1)
@@ -76,6 +76,8 @@ func (l *roomListener) watchParticipants() {
 			}
 		}
 
+		wasSomeOne := len(l.participants) != 0
+
 		for pid, participant := range l.participants {
 			if !slices.Contains(roomMemberIDs, pid) {
 				participant.Close()
@@ -86,9 +88,14 @@ func (l *roomListener) watchParticipants() {
 					ParticipantID: pid,
 					DisplayName:   "",
 					Message:       MessageLeft,
-					AudioFile:     participant.tr.getName(),
+					AudioFile:     participant.GetAudioFileName(),
 				})
 			}
+		}
+
+		if wasSomeOne && len(l.participants) == 0 {
+			fmt.Println("in room ", l.roomID, "no participants")
+			l.generateReport()
 		}
 	}
 }
@@ -173,4 +180,14 @@ func (l *roomListener) processNotActive(pid uint64, displayName string) {
 		Message:       MessageDisableCamera,
 		AudioFile:     pl.tr.getName(),
 	})
+}
+
+func (l *roomListener) generateReport() {
+	l.lw.Write(LogItem{
+		RoomID:  l.roomID,
+		Message: MessageEmptyRoom,
+	})
+	l.lw.Close()
+
+	l.lw = must(NewLogWriter("room-" + strconv.Itoa(int(l.roomID)) + "_" + strconv.Itoa(int(time.Now().Unix()))))
 }

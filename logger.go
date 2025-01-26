@@ -28,10 +28,10 @@ func (l *logWriter) Close() error {
 
 func (l *logWriter) Write(p LogItem) {
 	p.Time = time.Now()
+
 	encoder := json.NewEncoder(os.Stdout)
 	if l.file != nil {
-		json.NewEncoder(l.file)
-
+		encoder = json.NewEncoder(l.file)
 	}
 
 	encoder.Encode(p)
@@ -54,4 +54,5 @@ const (
 	MessageLeft             Message = "left"
 	MessageDisableCamera    Message = "disable camera"
 	MessageEnableCamera     Message = "enable camera"
+	MessageEmptyRoom        Message = "every one left"
 )

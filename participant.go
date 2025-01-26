@@ -109,6 +109,14 @@ func (l *participantListener) Close() error {
 	return nil
 }
 
+func (l *participantListener) GetAudioFileName() string {
+	if l == nil {
+		return ""
+	}
+
+	return l.tr.getName()
+}
+
 func startPeerConnection(handle *janus.Handle, roomID float64, participantID uint64, trackRecorder *trackRecorder) (*webrtc.PeerConnection, error) {
 	msg, err := handle.Message(map[string]interface{}{
 		"request": "join",
