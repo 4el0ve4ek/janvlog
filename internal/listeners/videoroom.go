@@ -1,16 +1,16 @@
-package main
+package listeners
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"janvlog/internal/janus"
+	"janvlog/internal/libs/xasync"
 	"sync"
 	"time"
-
-	janus "github.com/notedit/janus-go"
 )
 
-func NewVideoroomListener(jc *jc) (*videoroomListener, error) {
+func NewVideoroomListener(jc *janus.Client) (*videoroomListener, error) {
 	handle, err := jc.VideoroomHandle()
 	if err != nil {
 		return nil, err
@@ -21,7 +21,7 @@ func NewVideoroomListener(jc *jc) (*videoroomListener, error) {
 		rooms:  make(map[float64]*roomListener),
 		jc:     jc,
 
-		closer: NewCloser(),
+		closer: xasync.NewCloser(),
 		wg:     &sync.WaitGroup{},
 	}
 
@@ -35,9 +35,9 @@ func NewVideoroomListener(jc *jc) (*videoroomListener, error) {
 type videoroomListener struct {
 	handle *janus.Handle
 	rooms  map[float64]*roomListener
-	jc     *jc
+	jc     *janus.Client
 
-	closer *closer
+	closer xasync.Closer
 	wg     *sync.WaitGroup
 }
 
@@ -78,7 +78,7 @@ func (l *videoroomListener) watchHandle() {
 		case <-l.closer.Closed():
 			return
 		case event := <-l.handle.Events:
-			msg := ProcessEvent(l.handle.ID, event)
+			msg := janus.ProcessEvent(l.handle.ID, event)
 			if msg == nil {
 				continue
 			}

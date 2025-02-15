@@ -1,4 +1,4 @@
-package main
+package listeners
 
 import (
 	"encoding/json"
@@ -10,7 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/notedit/janus-go"
+	"janvlog/internal/janus"
+	"janvlog/internal/libs/xasync"
+
 	"github.com/pion/webrtc/v4"
 	"github.com/pion/webrtc/v4/pkg/media"
 	"github.com/pion/webrtc/v4/pkg/media/oggwriter"
@@ -18,7 +20,7 @@ import (
 
 func NewParticipantListener(
 	roomID float64, participantID uint64, displayName string,
-	janusClient *jc,
+	janusClient *janus.Client,
 ) (*participantListener, error) {
 	handle, err := janusClient.VideoroomHandle()
 	if err != nil {
@@ -37,7 +39,7 @@ func NewParticipantListener(
 		displayName:   displayName,
 		handle:        handle,
 		pc:            pc,
-		closer:        NewCloser(),
+		closer:        xasync.NewCloser(),
 		tr:            tr,
 	}
 
@@ -52,7 +54,7 @@ type participantListener struct {
 	displayName   string
 	handle        *janus.Handle
 	pc            *webrtc.PeerConnection
-	closer        *closer
+	closer        xasync.Closer
 	fname         string
 	tr            *trackRecorder
 }
@@ -63,7 +65,7 @@ func (l *participantListener) watchHandle() {
 		case <-l.closer.Closed():
 			return
 		case event := <-l.handle.Events:
-			msg := ProcessEvent(l.handle.ID, event)
+			msg := janus.ProcessEvent(l.handle.ID, event)
 			if msg == nil {
 				continue
 			}

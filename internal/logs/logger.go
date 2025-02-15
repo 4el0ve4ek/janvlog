@@ -1,4 +1,4 @@
-package main
+package logs
 
 import (
 	"encoding/json"
@@ -7,26 +7,31 @@ import (
 	"time"
 )
 
-func NewLogWriter(fname string) (*logWriter, error) {
+type Writer interface {
+	io.Closer
+	Write(LogItem)
+}
+
+func NewWriter(fname string) (*writer, error) {
 	file, err := os.Create(fname + ".jsonl")
 	if err != nil {
 		return nil, err
 	}
 
-	return &logWriter{
+	return &writer{
 		file: file,
 	}, nil
 }
 
-type logWriter struct {
+type writer struct {
 	file io.WriteCloser
 }
 
-func (l *logWriter) Close() error {
+func (l *writer) Close() error {
 	return l.file.Close()
 }
 
-func (l *logWriter) Write(p LogItem) {
+func (l *writer) Write(p LogItem) {
 	p.Time = time.Now()
 
 	encoder := json.NewEncoder(os.Stdout)

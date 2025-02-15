@@ -1,45 +1,52 @@
-package main
+package janus
 
 import (
 	"errors"
 	"fmt"
+	"janvlog/internal/libs/generics"
 
 	janus "github.com/notedit/janus-go"
 )
 
-func NewJanusClient(wshost string) *jc {
-	// Connect to gateway
+type Handle = janus.Handle
+type EventMsg = janus.EventMsg
+
+func New(wshost string) (*Client, error) {
 	gateway, err := janus.Connect("ws://" + wshost + ":8188/")
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	// Create session
 	session, err := gateway.Create()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return &jc{
+	return &Client{
 		gateway: gateway,
 		session: session,
-	}
+	}, nil
 }
 
-type jc struct {
+type Client struct {
 	gateway *janus.Gateway
 	session *janus.Session
 }
 
-func (jc *jc) VideoroomHandle() (*janus.Handle, error) {
+func (jc *Client) VideoroomHandle() (*janus.Handle, error) {
 	return jc.session.Attach("janus.plugin.videoroom")
 }
 
-func (jc *jc) Close() error {
+func (jc *Client) Close() error {
 	return errors.Join(
-		PairSecond(jc.session.Destroy()),
+		generics.Second(jc.session.Destroy()),
 		jc.gateway.Close(),
 	)
+}
+
+func (jc *Client) KeepAlive() (*janus.AckMsg, error) {
+	return jc.session.KeepAlive()
 }
 
 func ProcessEvent(handleID uint64, event any) *janus.EventMsg {

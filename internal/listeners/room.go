@@ -1,25 +1,27 @@
-package main
+package listeners
 
 import (
 	"errors"
 	"fmt"
+	"janvlog/internal/janus"
+	"janvlog/internal/libs/generics"
+	"janvlog/internal/libs/xasync"
+	"janvlog/internal/logs"
 	"slices"
 	"strconv"
 	"sync"
 	"time"
-
-	"github.com/notedit/janus-go"
 )
 
-func NewRoomListener(roomID float64, handle *janus.Handle, jc *jc) *roomListener {
+func NewRoomListener(roomID float64, handle *janus.Handle, jc *janus.Client) *roomListener {
 	ret := &roomListener{
 		handle:       handle,
 		roomID:       roomID,
 		participants: make(map[uint64]*participantListener),
 		jc:           jc,
-		closer:       NewCloser(),
+		closer:       xasync.NewCloser(),
 		wg:           &sync.WaitGroup{},
-		lw:           must(NewLogWriter("room-" + strconv.Itoa(int(roomID)) + "_" + strconv.Itoa(int(time.Now().Unix())))),
+		lw:           generics.Must(logs.NewWriter("room-" + strconv.Itoa(int(roomID)) + "_" + strconv.Itoa(int(time.Now().Unix())))),
 	}
 
 	ret.wg.Add(1)
@@ -32,11 +34,11 @@ type roomListener struct {
 	handle       *janus.Handle
 	roomID       float64
 	participants map[uint64]*participantListener
-	jc           *jc
+	jc           *janus.Client
 
-	closer *closer
+	closer xasync.Closer
 	wg     *sync.WaitGroup
-	lw     *logWriter
+	lw     logs.Writer
 }
 
 func (l *roomListener) watchParticipants() {
@@ -83,11 +85,11 @@ func (l *roomListener) watchParticipants() {
 				participant.Close()
 				delete(l.participants, pid)
 
-				l.lw.Write(LogItem{
+				l.lw.Write(logs.LogItem{
 					RoomID:        l.roomID,
 					ParticipantID: pid,
 					DisplayName:   "",
-					Message:       MessageLeft,
+					Message:       logs.MessageLeft,
 					AudioFile:     participant.GetAudioFileName(),
 				})
 			}
@@ -135,12 +137,12 @@ func (l *roomListener) processActive(pid uint64, displayName string) {
 
 	l.participants[pid] = pl
 
-	msg := MessageJoined
+	msg := logs.MessageJoined
 	if ok {
-		msg = MessageEnableCamera
+		msg = logs.MessageEnableCamera
 	}
 
-	l.lw.Write(LogItem{
+	l.lw.Write(logs.LogItem{
 		RoomID:        l.roomID,
 		ParticipantID: pid,
 		DisplayName:   displayName,
@@ -153,11 +155,11 @@ func (l *roomListener) processNotActive(pid uint64, displayName string) {
 	if !ok {
 		l.participants[pid] = nil
 
-		l.lw.Write(LogItem{
+		l.lw.Write(logs.LogItem{
 			RoomID:        l.roomID,
 			ParticipantID: pid,
 			DisplayName:   displayName,
-			Message:       MessageJoinedWithoutCam,
+			Message:       logs.MessageJoinedWithoutCam,
 		})
 
 		return
@@ -173,21 +175,21 @@ func (l *roomListener) processNotActive(pid uint64, displayName string) {
 	}
 	l.participants[pid] = nil
 
-	l.lw.Write(LogItem{
+	l.lw.Write(logs.LogItem{
 		RoomID:        l.roomID,
 		ParticipantID: pid,
 		DisplayName:   displayName,
-		Message:       MessageDisableCamera,
+		Message:       logs.MessageDisableCamera,
 		AudioFile:     pl.tr.getName(),
 	})
 }
 
 func (l *roomListener) generateReport() {
-	l.lw.Write(LogItem{
+	l.lw.Write(logs.LogItem{
 		RoomID:  l.roomID,
-		Message: MessageEmptyRoom,
+		Message: logs.MessageEmptyRoom,
 	})
 	l.lw.Close()
 
-	l.lw = must(NewLogWriter("room-" + strconv.Itoa(int(l.roomID)) + "_" + strconv.Itoa(int(time.Now().Unix()))))
+	l.lw = generics.Must(logs.NewWriter("room-" + strconv.Itoa(int(l.roomID)) + "_" + strconv.Itoa(int(time.Now().Unix()))))
 }

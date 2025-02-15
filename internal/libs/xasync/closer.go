@@ -1,9 +1,16 @@
-package main
+package xasync
 
 import (
 	"sync"
 	"time"
 )
+
+type Closer interface {
+	Closed() <-chan struct{}
+	IsClosed() bool
+	Wait(dur time.Duration) bool
+	Close() bool
+}
 
 func NewCloser() *closer {
 	return &closer{
