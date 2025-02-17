@@ -19,7 +19,7 @@ window.onload = function() {
 }
 
 
-var roomToParticipantToLogs = new Map();
+var roomLogs = new Map();
 
 function parseContent(content) { // returns []logs
     return content.split('\n')
@@ -31,52 +31,70 @@ function parseContent(content) { // returns []logs
 function updateState(logs) {
     console.log(logs);
 
-    roomToParticipantToLogs = new Map();
+    roomLogs = new Map();
 
     for (let log of logs) {
         let room = log.RoomID;
 
-        let participant = log.ParticipantID;
-        if (!roomToParticipantToLogs.has(room)) {
-            roomToParticipantToLogs.set(room, new Map());
+        if (!roomLogs.has(room)) {
+            roomLogs.set(room, []);
         }
 
-        let participantToLogs = roomToParticipantToLogs.get(room);
-        if (!participantToLogs.has(participant)) {
-            participantToLogs.set(participant, []);
-        }
-
-        let participantLogs = participantToLogs.get(participant);
-        participantLogs.push(log);
+        roomLogs.get(room).push(log);
     }
 }
 
 function reloadState() {
     var el = document.getElementById('log-viewer')
-    for (var room of roomToParticipantToLogs.keys()) {
+    for (var room of roomLogs.keys()) {
         var roomEl = document.createElement('h2');
-        roomEl.textContent = "Room id is " + room + ". List of Participants: ";
-        el.after(roomEl);
+        roomEl.textContent = "Room id is " + room + ". List of Events: ";
+        el.appendChild(roomEl);
 
-        for (var participant of roomToParticipantToLogs.get(room).keys()) {
-            let logs = roomToParticipantToLogs.get(room).get(participant)
-            if (logs.length == 0) {
-                continue;
-            }
+        var logs = roomLogs.get(room);
+        logs.sort((a, b) => new Date(a.Time) - new Date(b.Time)) 
+
+        var logsEl = document.createElement('ul')
+        
+        logs.forEach(log => {
+            let el = document.createElement("li")
             
-            let participantEl = document.createElement('h4');
-            participantEl.textContent = logs[0].DisplayName + "(id: " + participant + ")";
-            roomEl.after(participantEl);
+            const time = new Date(log.Time);
+            const formatedTime = 
+                String(time.getUTCHours()).padStart(2, "0") + 
+                ":" + 
+                String(time.getUTCMinutes()).padStart(2, "0") + 
+                ":" + 
+                String(time.getUTCSeconds()).padStart(2, "0") + 
+                "." + 
+                String(time.getUTCMilliseconds()).padStart(3, '0');
 
-            var logsEl = document.createElement('ul')
+            el.innerHTML = formatedTime + " " + log.DisplayName + ": " + (log.Speech ? log.Speech : log.Message);
+            // el.innerHTML = "event: " + log.Message.bold() + ", happened at: " + new Date(log.Time) + (log.AudioFile ? " AudioFile: " + log.AudioFile : "")
+            logsEl.appendChild(el)
+        });
+
+        roomEl.after(logsEl)
+
+        // for (var participant of roomLogs.get(room).keys()) {
+        //     let logs = roomLogs.get(room).get(participant)
+        //     if (logs.length == 0) {
+        //         continue;
+        //     }
             
-            logs.forEach(log => {
-                let el = document.createElement("li")
-                el.innerHTML = "event: " + log.Message.bold() + ", happened at: " + new Date(log.Time) + (log.AudioFile ? " AudioFile: " + log.AudioFile : "")
-                logsEl.appendChild(el)
-            });
+        //     let participantEl = document.createElement('h4');
+        //     participantEl.textContent = logs[0].DisplayName + "(id: " + participant + ")";
+        //     roomEl.after(participantEl);
 
-            participantEl.after(logsEl)
-        }
+        //     var logsEl = document.createElement('ul')
+            
+        //     logs.forEach(log => {
+        //         let el = document.createElement("li")
+        //         el.innerHTML = "event: " + log.Message.bold() + ", happened at: " + new Date(log.Time) + (log.AudioFile ? " AudioFile: " + log.AudioFile : "")
+        //         logsEl.appendChild(el)
+        //     });
+
+        //     participantEl.after(logsEl)
+        // }
     }
 }

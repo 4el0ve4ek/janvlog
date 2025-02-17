@@ -18,10 +18,10 @@ import (
 	"github.com/pion/webrtc/v4/pkg/media/oggwriter"
 )
 
-func NewParticipantListener(
+func NewParticipant(
 	roomID float64, participantID uint64, displayName string,
 	janusClient *janus.Client,
-) (*participantListener, error) {
+) (*participant, error) {
 	handle, err := janusClient.VideoroomHandle()
 	if err != nil {
 		return nil, err
@@ -33,7 +33,7 @@ func NewParticipantListener(
 		return nil, err
 	}
 
-	ret := &participantListener{
+	ret := &participant{
 		roomID:        roomID,
 		participantID: participantID,
 		displayName:   displayName,
@@ -48,7 +48,7 @@ func NewParticipantListener(
 	return ret, nil
 }
 
-type participantListener struct {
+type participant struct {
 	roomID        float64
 	participantID uint64
 	displayName   string
@@ -59,7 +59,7 @@ type participantListener struct {
 	tr            *trackRecorder
 }
 
-func (l *participantListener) watchHandle() {
+func (l *participant) watchHandle() {
 	for {
 		select {
 		case <-l.closer.Closed():
@@ -85,7 +85,7 @@ func (l *participantListener) watchHandle() {
 	}
 }
 
-func (l *participantListener) Close() error {
+func (l *participant) Close() error {
 	if l == nil {
 		return nil
 	}
@@ -111,7 +111,7 @@ func (l *participantListener) Close() error {
 	return nil
 }
 
-func (l *participantListener) GetAudioFileName() string {
+func (l *participant) GetAudioFileName() string {
 	if l == nil {
 		return ""
 	}

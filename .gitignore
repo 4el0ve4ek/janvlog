@@ -1,4 +1,5 @@
-janvlog
+cmd/janvlog/janvlog
+cmd/janvlog/logs/
 *.ogg
 *.jsonl
 .DS_store

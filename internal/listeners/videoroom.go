@@ -6,20 +6,22 @@ import (
 	"fmt"
 	"janvlog/internal/janus"
 	"janvlog/internal/libs/xasync"
+	"janvlog/internal/reporter"
 	"sync"
 	"time"
 )
 
-func NewVideoroomListener(jc *janus.Client) (*videoroomListener, error) {
+func NewVideoroom(jc *janus.Client, reporter *reporter.Generator) (*videoroom, error) {
 	handle, err := jc.VideoroomHandle()
 	if err != nil {
 		return nil, err
 	}
 
-	ret := &videoroomListener{
-		handle: handle,
-		rooms:  make(map[float64]*roomListener),
-		jc:     jc,
+	ret := &videoroom{
+		handle:   handle,
+		rooms:    make(map[float64]*room),
+		jc:       jc,
+		reporter: reporter,
 
 		closer: xasync.NewCloser(),
 		wg:     &sync.WaitGroup{},
@@ -32,16 +34,17 @@ func NewVideoroomListener(jc *janus.Client) (*videoroomListener, error) {
 	return ret, nil
 }
 
-type videoroomListener struct {
-	handle *janus.Handle
-	rooms  map[float64]*roomListener
-	jc     *janus.Client
+type videoroom struct {
+	handle   *janus.Handle
+	rooms    map[float64]*room
+	jc       *janus.Client
+	reporter *reporter.Generator
 
 	closer xasync.Closer
 	wg     *sync.WaitGroup
 }
 
-func (l *videoroomListener) watchRooms() {
+func (l *videoroom) watchRooms() {
 	defer l.wg.Done()
 
 	for {
@@ -64,13 +67,13 @@ func (l *videoroomListener) watchRooms() {
 			_, ok := l.rooms[roomID]
 			if !ok {
 				fmt.Println("New room", roomID)
-				l.rooms[roomID] = NewRoomListener(roomID, l.handle, l.jc)
+				l.rooms[roomID] = NewRoom(roomID, l.handle, l.jc, l.reporter)
 			}
 		}
 	}
 }
 
-func (l *videoroomListener) watchHandle() {
+func (l *videoroom) watchHandle() {
 	defer l.wg.Done()
 
 	for {
@@ -89,7 +92,7 @@ func (l *videoroomListener) watchHandle() {
 	}
 }
 
-func (l *videoroomListener) Close() error {
+func (l *videoroom) Close() error {
 	l.closer.Close()
 	l.wg.Wait()
 

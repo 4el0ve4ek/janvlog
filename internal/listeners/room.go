@@ -2,26 +2,29 @@ package listeners
 
 import (
 	"errors"
-	"fmt"
-	"janvlog/internal/janus"
-	"janvlog/internal/libs/generics"
-	"janvlog/internal/libs/xasync"
-	"janvlog/internal/logs"
+	"log"
 	"slices"
 	"strconv"
 	"sync"
 	"time"
+
+	"janvlog/internal/janus"
+	"janvlog/internal/libs/generics"
+	"janvlog/internal/libs/xasync"
+	"janvlog/internal/logs"
+	"janvlog/internal/reporter"
 )
 
-func NewRoomListener(roomID float64, handle *janus.Handle, jc *janus.Client) *roomListener {
-	ret := &roomListener{
+func NewRoom(roomID float64, handle *janus.Handle, jc *janus.Client, reporter *reporter.Generator) *room {
+	ret := &room{
+		reporter:     reporter,
 		handle:       handle,
 		roomID:       roomID,
-		participants: make(map[uint64]*participantListener),
+		participants: make(map[uint64]*participant),
 		jc:           jc,
 		closer:       xasync.NewCloser(),
 		wg:           &sync.WaitGroup{},
-		lw:           generics.Must(logs.NewWriter("room-" + strconv.Itoa(int(roomID)) + "_" + strconv.Itoa(int(time.Now().Unix())))),
+		lw:           generics.Must(logs.NewStorage("logs/raw/room-" + strconv.Itoa(int(roomID)) + "_" + strconv.Itoa(int(time.Now().Unix())))),
 	}
 
 	ret.wg.Add(1)
@@ -30,18 +33,19 @@ func NewRoomListener(roomID float64, handle *janus.Handle, jc *janus.Client) *ro
 	return ret
 }
 
-type roomListener struct {
+type room struct {
 	handle       *janus.Handle
 	roomID       float64
-	participants map[uint64]*participantListener
+	participants map[uint64]*participant
 	jc           *janus.Client
 
-	closer xasync.Closer
-	wg     *sync.WaitGroup
-	lw     logs.Writer
+	closer   xasync.Closer
+	wg       *sync.WaitGroup
+	lw       logs.Storage
+	reporter *reporter.Generator
 }
 
-func (l *roomListener) watchParticipants() {
+func (l *room) watchParticipants() {
 	defer l.wg.Done()
 
 	for {
@@ -58,7 +62,7 @@ func (l *roomListener) watchParticipants() {
 			panic(err)
 		}
 
-		// fmt.Println(string(PairFirst(json.MarshalIndent(lst.PluginData.Data, "", "\t"))))
+		// log.Println(string(PairFirst(json.MarshalIndent(lst.PluginData.Data, "", "\t"))))
 		participants := lst.PluginData.Data["participants"].([]any)
 
 		roomMemberIDs := make([]uint64, 0, len(participants))
@@ -85,7 +89,7 @@ func (l *roomListener) watchParticipants() {
 				participant.Close()
 				delete(l.participants, pid)
 
-				l.lw.Write(logs.LogItem{
+				l.lw.Add(logs.Item{
 					RoomID:        l.roomID,
 					ParticipantID: pid,
 					DisplayName:   "",
@@ -96,13 +100,13 @@ func (l *roomListener) watchParticipants() {
 		}
 
 		if wasSomeOne && len(l.participants) == 0 {
-			fmt.Println("in room ", l.roomID, "no participants")
+			log.Println("in room ", l.roomID, "no participants")
 			l.generateReport()
 		}
 	}
 }
 
-func (l *roomListener) Close() error {
+func (l *room) Close() error {
 	if l == nil {
 		return nil
 	}
@@ -118,31 +122,31 @@ func (l *roomListener) Close() error {
 	return errors.Join(errs...)
 }
 
-func (l *roomListener) processActive(pid uint64, displayName string) {
-	pl, ok := l.participants[pid]
-	if ok && pl != nil {
+func (l *room) processActive(pid uint64, displayName string) {
+	pl, wasConnected := l.participants[pid]
+	if wasConnected && pl != nil {
 		return
 	}
 
-	fmt.Println("in room ", l.roomID, "new participant: ", pid)
+	log.Println("in room ", l.roomID, "new participant: ", pid)
 
-	pl, err := NewParticipantListener(
+	pl, err := NewParticipant(
 		l.roomID, pid, displayName,
 		l.jc,
 	)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 
 	l.participants[pid] = pl
 
 	msg := logs.MessageJoined
-	if ok {
+	if wasConnected {
 		msg = logs.MessageEnableCamera
 	}
 
-	l.lw.Write(logs.LogItem{
+	l.lw.Add(logs.Item{
 		RoomID:        l.roomID,
 		ParticipantID: pid,
 		DisplayName:   displayName,
@@ -150,12 +154,12 @@ func (l *roomListener) processActive(pid uint64, displayName string) {
 	})
 }
 
-func (l *roomListener) processNotActive(pid uint64, displayName string) {
+func (l *room) processNotActive(pid uint64, displayName string) {
 	pl, ok := l.participants[pid]
 	if !ok {
 		l.participants[pid] = nil
 
-		l.lw.Write(logs.LogItem{
+		l.lw.Add(logs.Item{
 			RoomID:        l.roomID,
 			ParticipantID: pid,
 			DisplayName:   displayName,
@@ -171,11 +175,11 @@ func (l *roomListener) processNotActive(pid uint64, displayName string) {
 
 	err := pl.Close()
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 	l.participants[pid] = nil
 
-	l.lw.Write(logs.LogItem{
+	l.lw.Add(logs.Item{
 		RoomID:        l.roomID,
 		ParticipantID: pid,
 		DisplayName:   displayName,
@@ -184,12 +188,15 @@ func (l *roomListener) processNotActive(pid uint64, displayName string) {
 	})
 }
 
-func (l *roomListener) generateReport() {
-	l.lw.Write(logs.LogItem{
+func (l *room) generateReport() {
+	l.lw.Add(logs.Item{
 		RoomID:  l.roomID,
 		Message: logs.MessageEmptyRoom,
 	})
+
 	l.lw.Close()
 
-	l.lw = generics.Must(logs.NewWriter("room-" + strconv.Itoa(int(l.roomID)) + "_" + strconv.Itoa(int(time.Now().Unix()))))
+	l.reporter.StartProcessing(l.lw.File())
+
+	l.lw = generics.Must(logs.NewStorage("logs/raw/room-" + strconv.Itoa(int(l.roomID)) + "_" + strconv.Itoa(int(time.Now().Unix()))))
 }
