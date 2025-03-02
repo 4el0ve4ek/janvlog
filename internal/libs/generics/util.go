@@ -1,10 +1,10 @@
 package generics
 
-func First[T, U any](t T, u U) T {
+func First[T, U any](t T, _ U) T {
 	return t
 }
 
-func Second[T, U any](t T, u U) U {
+func Second[T, U any](_ T, u U) U {
 	return u
 }
 

@@ -3,11 +3,12 @@ package stt
 import (
 	"encoding/json"
 	"fmt"
+	"janvlog/internal/libs/xerrors"
 	"os"
 	"os/exec"
 )
 
-func NewWhisperCPPClient(path string, weights string) Client {
+func NewWhisperCPPClient(path string, weights string) *whisperCPPClient {
 	return &whisperCPPClient{
 		path:    path,
 		weights: weights,
@@ -25,7 +26,7 @@ func (w *whisperCPPClient) Process(fname string) (Response, error) {
 	}
 	defer os.Remove(preprocessedFile)
 
-	cmd := exec.Command(w.path, "-m", w.weights, "-f", preprocessedFile, "-oj", "--language", "ru")
+	cmd := exec.Command(w.path, "-m", w.weights, "-f", preprocessedFile, "-oj", "--language", "ru") //nolint:gosec
 
 	stderr := attachStderr(cmd)
 	if err := cmd.Run(); err != nil {
@@ -34,7 +35,7 @@ func (w *whisperCPPClient) Process(fname string) (Response, error) {
 
 	whisperRes, err := os.Open(preprocessedFile + ".json")
 	if err != nil {
-		return Response{}, err
+		return Response{}, xerrors.Wrap(err, "os.Open")
 	}
 	defer whisperRes.Close()
 
@@ -42,10 +43,10 @@ func (w *whisperCPPClient) Process(fname string) (Response, error) {
 
 	err = json.NewDecoder(whisperRes).Decode(&whisperResponse)
 	if err != nil {
-		return Response{}, err
+		return Response{}, xerrors.Wrap(err, "json.Decode whisper response")
 	}
 
-	ret := Response{}
+	var ret Response
 
 	for _, part := range whisperResponse.Transcription {
 		ret.Parts = append(ret.Parts, ResponsePart{

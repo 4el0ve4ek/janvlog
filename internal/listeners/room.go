@@ -15,13 +15,13 @@ import (
 	"janvlog/internal/reporter"
 )
 
-func NewRoom(roomID float64, handle *janus.Handle, jc *janus.Client, reporter *reporter.Generator) *room {
+func newRoom(roomID logs.RoomID, handle *janus.Handle, janusClient *janus.Client, reporter *reporter.Generator) *room {
 	ret := &room{
 		reporter:     reporter,
 		handle:       handle,
 		roomID:       roomID,
-		participants: make(map[uint64]*participant),
-		jc:           jc,
+		participants: make(map[logs.ParticipantID]*participant),
+		janusClient:  janusClient,
 		closer:       xasync.NewCloser(),
 		wg:           &sync.WaitGroup{},
 		lw:           generics.Must(logs.NewStorage("logs/raw/room-" + strconv.Itoa(int(roomID)) + "_" + strconv.Itoa(int(time.Now().Unix())))),
@@ -35,9 +35,9 @@ func NewRoom(roomID float64, handle *janus.Handle, jc *janus.Client, reporter *r
 
 type room struct {
 	handle       *janus.Handle
-	roomID       float64
-	participants map[uint64]*participant
-	jc           *janus.Client
+	roomID       logs.RoomID
+	participants map[logs.ParticipantID]*participant
+	janusClient  *janus.Client
 
 	closer   xasync.Closer
 	wg       *sync.WaitGroup
@@ -65,11 +65,12 @@ func (l *room) watchParticipants() {
 		// log.Println(string(PairFirst(json.MarshalIndent(lst.PluginData.Data, "", "\t"))))
 		participants := lst.PluginData.Data["participants"].([]any)
 
-		roomMemberIDs := make([]uint64, 0, len(participants))
+		roomMemberIDs := make([]logs.ParticipantID, 0, len(participants))
+
 		for _, participant := range participants {
 			participantT := participant.(map[string]interface{})
 
-			pid := uint64(participantT["id"].(float64))
+			pid := logs.ParticipantID(participantT["id"].(float64))
 			isActive := participantT["publisher"].(bool)
 			displayName := participantT["display"].(string)
 
@@ -122,24 +123,24 @@ func (l *room) Close() error {
 	return errors.Join(errs...)
 }
 
-func (l *room) processActive(pid uint64, displayName string) {
-	pl, wasConnected := l.participants[pid]
-	if wasConnected && pl != nil {
+func (l *room) processActive(pid logs.ParticipantID, displayName string) {
+	participant, wasConnected := l.participants[pid]
+	if wasConnected && participant != nil {
 		return
 	}
 
 	log.Println("in room ", l.roomID, "new participant: ", pid)
 
-	pl, err := NewParticipant(
+	participant, err := newParticipant(
 		l.roomID, pid, displayName,
-		l.jc,
+		l.janusClient,
 	)
 	if err != nil {
 		log.Println(err)
 		return
 	}
 
-	l.participants[pid] = pl
+	l.participants[pid] = participant
 
 	msg := logs.MessageJoined
 	if wasConnected {
@@ -154,8 +155,8 @@ func (l *room) processActive(pid uint64, displayName string) {
 	})
 }
 
-func (l *room) processNotActive(pid uint64, displayName string) {
-	pl, ok := l.participants[pid]
+func (l *room) processNotActive(pid logs.ParticipantID, displayName string) {
+	participant, ok := l.participants[pid]
 	if !ok {
 		l.participants[pid] = nil
 
@@ -169,14 +170,15 @@ func (l *room) processNotActive(pid uint64, displayName string) {
 		return
 	}
 
-	if pl == nil {
+	if participant == nil {
 		return
 	}
 
-	err := pl.Close()
+	err := participant.Close()
 	if err != nil {
 		log.Println(err)
 	}
+
 	l.participants[pid] = nil
 
 	l.lw.Add(logs.Item{
@@ -184,7 +186,7 @@ func (l *room) processNotActive(pid uint64, displayName string) {
 		ParticipantID: pid,
 		DisplayName:   displayName,
 		Message:       logs.MessageDisableCamera,
-		AudioFile:     pl.tr.getName(),
+		AudioFile:     participant.trackRecorder.getName(),
 	})
 }
 

@@ -1,15 +1,30 @@
 package logs
 
-import "time"
+import (
+	"strconv"
+	"time"
+)
+
+type RoomID float64
+
+func (id RoomID) String() string {
+	return strconv.FormatFloat(float64(id), 'f', -1, 64)
+}
+
+type ParticipantID uint64
+
+func (id ParticipantID) String() string {
+	return strconv.FormatUint(uint64(id), 10)
+}
 
 type Item struct {
-	RoomID        float64
-	ParticipantID uint64
-	DisplayName   string
-	Time          time.Time
-	Message       Message
-	AudioFile     string `json:",omitempty"`
-	Speech        string `json:",omitempty"`
+	RoomID        RoomID        `json:"RoomID"`
+	ParticipantID ParticipantID `json:"ParticipantID"`
+	DisplayName   string        `json:"DisplayName"`
+	Time          time.Time     `json:"Time"`
+	Message       Message       `json:"Message"`
+	AudioFile     string        `json:"AudioFile,omitempty"`
+	Speech        string        `json:"Speech,omitempty"`
 }
 
 type Message string

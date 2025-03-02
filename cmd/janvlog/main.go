@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"janvlog/internal/janus"
 	"janvlog/internal/listeners"
+	"janvlog/internal/mail"
 	"janvlog/internal/reporter"
 	"janvlog/internal/stt"
 	"os"
@@ -20,14 +21,19 @@ func main() {
 		syscall.SIGTERM,
 	)
 
-	const (
-		host           = "84.201.174.125"
-		whispercpp     = "/Users/da-aksenov/self-thing/whisper.cpp"
-		whispercli     = whispercpp + "/build/bin/whisper-cli"
-		whisperweights = whispercpp + "/models/ggml-large-v3-turbo-q8_0.bin"
+	const host = "84.201.174.125"
+
+	reporter := reporter.NewGenerator(
+		stt.NewWhisperTimestampdClient("http://localhost:8080/transcribe"),
+		mail.NewSender(mail.Config{
+			Host:     "smtp.yandex.ru",
+			Port:     587,
+			From:     "aksenoff.dany@yandex.ru",
+			Username: "aksenoff.dany",
+			Password: os.Getenv("YAPASSWORD"),
+		}),
 	)
 
-	reporter := reporter.NewGenerator(stt.NewWhisperTimestampdClient("http://localhost:8080/transcribe"))
 	defer reporter.Wait()
 
 	if len(os.Args) == 3 && os.Args[1] == "regenerate" {
@@ -35,16 +41,17 @@ func main() {
 		return
 	}
 
-	jc, err := janus.New(host)
+	janusClient, err := janus.New(host)
 	if err != nil {
 		panic(err)
 	}
-	defer jc.Close()
+	defer janusClient.Close()
 
-	videoroomListener, err := listeners.NewVideoroom(jc, reporter)
+	videoroomListener, err := listeners.NewVideoroom(janusClient, reporter)
 	if err != nil {
 		panic(err)
 	}
+
 	defer func() {
 		fmt.Println(videoroomListener.Close())
 	}()
@@ -53,7 +60,7 @@ func main() {
 	defer tick.Stop()
 
 	for {
-		if _, err := jc.KeepAlive(); err != nil {
+		if _, err := janusClient.KeepAlive(); err != nil {
 			panic(err)
 		}
 

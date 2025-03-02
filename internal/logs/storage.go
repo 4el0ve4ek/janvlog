@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"io"
+	"janvlog/internal/libs/xerrors"
 	"os"
 	"path"
 	"path/filepath"
@@ -13,10 +14,9 @@ import (
 
 type Storage interface {
 	io.Closer
-	Add(...Item)
+	Add(items ...Item)
 	Items() []Item
 	File() string
-	Clear()
 }
 
 var _ Storage = (*storage)(nil)
@@ -28,41 +28,49 @@ func NewStorage(fname string) (*storage, error) {
 
 	err := os.MkdirAll(filepath.Dir(fname), 0777)
 	if err != nil {
-		return nil, err
+		return nil, xerrors.Wrap(err, "os.MkdirAll")
 	}
 
-	f, err := os.OpenFile(fname, os.O_RDWR|os.O_CREATE, 0777)
+	file, err := os.Create(fname)
 	if err != nil {
-		return nil, err
+		return nil, xerrors.Wrap(err, "os.Create")
 	}
 
-	s := &storage{
+	return &storage{
 		fname: fname,
-		file:  f,
+		file:  file,
 		items: make([]Item, 0),
+	}, nil
+}
+
+func ItemsFromStorage(fname string) ([]Item, error) {
+	file, err := os.OpenFile(fname, os.O_RDWR|os.O_CREATE, 0777)
+	if err != nil {
+		return nil, xerrors.Wrap(err, "os.OpenFile")
 	}
 
-	scan := bufio.NewScanner(f)
+	items := make([]Item, 0)
+	scan := bufio.NewScanner(file)
+
 	for scan.Scan() {
 		var item Item
 
 		err := json.Unmarshal(scan.Bytes(), &item)
 		if err != nil {
-			return nil, err
+			return nil, xerrors.Wrap(err, "json.Unmarshal")
 		}
 
-		s.items = append(s.items, item)
+		items = append(items, item)
 	}
 
-	return s, nil
+	return items, nil
 }
 
 type storage struct {
-	fname  string
-	file   *os.File
-	items  []Item
-	mu     sync.Mutex
-	closed bool
+	fname string
+	file  *os.File
+	items []Item
+	mu    sync.Mutex
 }
 
 func (s *storage) Close() error {
@@ -70,20 +78,12 @@ func (s *storage) Close() error {
 	defer s.mu.Unlock()
 
 	s.items = nil
-	return s.file.Close()
+
+	return s.file.Close() //nolint:wrapcheck
 }
 
 func (s *storage) File() string {
 	return s.fname
-}
-
-func (s *storage) Clear() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.items = nil
-	s.file.Truncate(0)
-	s.file.Seek(0, 0)
 }
 
 func (s *storage) Add(items ...Item) {
@@ -97,8 +97,9 @@ func (s *storage) Add(items ...Item) {
 	}
 
 	s.items = append(s.items, items...)
+
 	for _, item := range items {
-		json.NewEncoder(s.file).Encode(item)
+		_ = json.NewEncoder(s.file).Encode(item)
 	}
 }
 

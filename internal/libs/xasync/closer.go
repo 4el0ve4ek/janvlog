@@ -50,6 +50,7 @@ func (c *closer) Wait(dur time.Duration) bool {
 
 func (c *closer) Close() bool {
 	closed := false
+
 	c.closedOnce.Do(func() {
 		close(c.closed)
 		closed = true

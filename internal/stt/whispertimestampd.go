@@ -1,31 +1,34 @@
 package stt
 
 import (
+	"context"
 	"encoding/json"
+	"janvlog/internal/libs/xerrors"
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 type whisperTimestampdClient struct {
 	endpoint string
 }
 
-func NewWhisperTimestampdClient(endpoint string) Client {
+func NewWhisperTimestampdClient(endpoint string) *whisperTimestampdClient {
 	return &whisperTimestampdClient{
 		endpoint: endpoint,
 	}
 }
 
 func (w *whisperTimestampdClient) Process(fname string) (Response, error) {
-	req, err := http.NewRequest("POST", w.endpoint, nil)
+	req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, w.endpoint, nil)
 	if err != nil {
-		return Response{}, err
+		return Response{}, xerrors.Wrap(err, "http.NewRequestWithContext")
 	}
 
 	pwd, err := os.Executable()
 	if err != nil {
-		return Response{}, err
+		return Response{}, xerrors.Wrap(err, "os.Executable")
 	}
 
 	cgi := req.URL.Query()
@@ -34,14 +37,15 @@ func (w *whisperTimestampdClient) Process(fname string) (Response, error) {
 
 	rawResponse, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return Response{}, err
+		return Response{}, xerrors.Wrap(err, "http.DefaultClient.Do")
 	}
 	defer rawResponse.Body.Close()
 
 	var parsed whisperTimestampdResponse
+
 	err = json.NewDecoder(rawResponse.Body).Decode(&parsed)
 	if err != nil {
-		return Response{}, err
+		return Response{}, xerrors.Wrap(err, "json.Decode whisper response")
 	}
 
 	var ret Response
@@ -51,8 +55,8 @@ func (w *whisperTimestampdClient) Process(fname string) (Response, error) {
 				From int `json:"from"`
 				To   int `json:"to"`
 			}{
-				From: int(seg.Start * 1000),
-				To:   int(seg.End * 1000),
+				From: int(seg.Start * float64(time.Second/time.Millisecond)),
+				To:   int(seg.End * float64(time.Second/time.Millisecond)),
 			},
 			Text: seg.Text,
 		})

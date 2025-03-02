@@ -6,45 +6,49 @@ import (
 	"fmt"
 	"janvlog/internal/janus"
 	"janvlog/internal/libs/xasync"
+	"janvlog/internal/libs/xerrors"
+	"janvlog/internal/logs"
 	"janvlog/internal/reporter"
 	"sync"
 	"time"
 )
 
-func NewVideoroom(jc *janus.Client, reporter *reporter.Generator) (*videoroom, error) {
-	handle, err := jc.VideoroomHandle()
+func NewVideoroom(janusClient *janus.Client, reporter *reporter.Generator) (*Videoroom, error) {
+	handle, err := janusClient.VideoroomHandle()
 	if err != nil {
-		return nil, err
+		return nil, xerrors.Wrap(err, "janus.VideoroomHandle")
 	}
 
-	ret := &videoroom{
-		handle:   handle,
-		rooms:    make(map[float64]*room),
-		jc:       jc,
-		reporter: reporter,
+	ret := &Videoroom{
+		handle:      handle,
+		rooms:       make(map[logs.RoomID]*room),
+		janusClient: janusClient,
+		reporter:    reporter,
 
 		closer: xasync.NewCloser(),
 		wg:     &sync.WaitGroup{},
 	}
 
-	ret.wg.Add(2)
+	ret.wg.Add(1)
 	go ret.watchHandle()
+
+	ret.wg.Add(1)
 	go ret.watchRooms()
 
 	return ret, nil
 }
 
-type videoroom struct {
-	handle   *janus.Handle
-	rooms    map[float64]*room
-	jc       *janus.Client
-	reporter *reporter.Generator
+type Videoroom struct {
+	handle      *janus.Handle
+	rooms       map[logs.RoomID]*room
+	janusClient *janus.Client
+	reporter    *reporter.Generator
 
 	closer xasync.Closer
 	wg     *sync.WaitGroup
 }
 
-func (l *videoroom) watchRooms() {
+func (l *Videoroom) watchRooms() {
 	defer l.wg.Done()
 
 	for {
@@ -62,18 +66,18 @@ func (l *videoroom) watchRooms() {
 
 		rooms := lst.PluginData.Data["list"].([]any)
 		for _, room := range rooms {
-			roomID := room.(map[string]interface{})["room"].(float64)
+			roomID := logs.RoomID(room.(map[string]interface{})["room"].(float64))
 
 			_, ok := l.rooms[roomID]
 			if !ok {
 				fmt.Println("New room", roomID)
-				l.rooms[roomID] = NewRoom(roomID, l.handle, l.jc, l.reporter)
+				l.rooms[roomID] = newRoom(roomID, l.handle, l.janusClient, l.reporter)
 			}
 		}
 	}
 }
 
-func (l *videoroom) watchHandle() {
+func (l *Videoroom) watchHandle() {
 	defer l.wg.Done()
 
 	for {
@@ -85,6 +89,7 @@ func (l *videoroom) watchHandle() {
 			if msg == nil {
 				continue
 			}
+
 			jj, _ := json.MarshalIndent(msg, "", "\t")
 			fmt.Printf("EventMsg %+v", msg.Plugindata.Data)
 			fmt.Println(string(jj))
@@ -92,7 +97,7 @@ func (l *videoroom) watchHandle() {
 	}
 }
 
-func (l *videoroom) Close() error {
+func (l *Videoroom) Close() error {
 	l.closer.Close()
 	l.wg.Wait()
 

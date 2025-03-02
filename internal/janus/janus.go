@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"janvlog/internal/libs/generics"
+	"janvlog/internal/libs/xerrors"
 
 	janus "github.com/notedit/janus-go"
 )
@@ -14,13 +15,13 @@ type EventMsg = janus.EventMsg
 func New(wshost string) (*Client, error) {
 	gateway, err := janus.Connect("ws://" + wshost + ":8188/")
 	if err != nil {
-		return nil, err
+		return nil, xerrors.Wrap(err, "janus.Connect")
 	}
 
 	// Create session
 	session, err := gateway.Create()
 	if err != nil {
-		return nil, err
+		return nil, xerrors.Wrap(err, "gateway.Create")
 	}
 
 	return &Client{
@@ -35,7 +36,7 @@ type Client struct {
 }
 
 func (jc *Client) VideoroomHandle() (*janus.Handle, error) {
-	return jc.session.Attach("janus.plugin.videoroom")
+	return jc.session.Attach("janus.plugin.videoroom") //nolint:wrapcheck
 }
 
 func (jc *Client) Close() error {
@@ -46,7 +47,7 @@ func (jc *Client) Close() error {
 }
 
 func (jc *Client) KeepAlive() (*janus.AckMsg, error) {
-	return jc.session.KeepAlive()
+	return jc.session.KeepAlive() //nolint:wrapcheck
 }
 
 func ProcessEvent(handleID uint64, event any) *janus.EventMsg {

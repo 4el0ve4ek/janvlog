@@ -1,8 +1,11 @@
 package reporter
 
 import (
+	"fmt"
 	"janvlog/internal/logs"
+	"janvlog/internal/mail"
 	"janvlog/internal/stt"
+	"janvlog/internal/templator"
 	"log"
 	"path"
 	"path/filepath"
@@ -11,32 +14,52 @@ import (
 	"time"
 )
 
-func NewGenerator(stt stt.Client) *Generator {
+func NewGenerator(stt stt.Client, mail *mail.Sender) *Generator {
 	return &Generator{
-		stt: stt,
+		stt:  stt,
+		mail: mail,
 	}
 }
 
 type Generator struct {
-	wg  sync.WaitGroup
-	stt stt.Client
+	wg   sync.WaitGroup
+	stt  stt.Client
+	mail *mail.Sender
 }
 
 func (g *Generator) StartProcessing(rawLog string) {
 	g.wg.Add(1)
+
 	go func() {
 		defer g.wg.Done()
-		oldStorage, _ := logs.NewStorage(rawLog)
-		items := oldStorage.Items()
-		oldStorage.Close()
+
+		items, err := logs.ItemsFromStorage(rawLog)
+		if err != nil {
+			log.Println("error reading storage", err)
+		}
+
+		if len(items) == 0 {
+			return
+		}
 
 		resItems := g.process(items)
 		resItems = g.fillNames(resItems)
 
-		storage, _ := logs.NewStorage(filepath.Join("logs", "processed", path.Base(rawLog)))
-		storage.Clear()
+		storage, err := logs.NewStorage(filepath.Join("logs", "processed", path.Base(rawLog)))
+		if err != nil {
+			log.Println("error creating storage", err)
+		}
+
 		storage.Add(resItems...)
 		storage.Close()
+
+		message := templator.GenerateHTML(resItems)
+		fmt.Println(string(message))
+
+		err = g.mail.SendHTML("aksenoff.dany@yandex.ru", fmt.Sprintf("Generated remort for room - %v ", resItems[0].RoomID.String()), message)
+		if err != nil {
+			log.Println("error sending email", err)
+		}
 	}()
 }
 
@@ -45,7 +68,7 @@ func (g *Generator) Wait() {
 }
 
 func (g *Generator) process(items []logs.Item) []logs.Item {
-	talking := make(map[uint64]time.Time)
+	talking := make(map[logs.ParticipantID]time.Time)
 	ret := slices.Concat(items)
 
 	for _, item := range items {
@@ -66,6 +89,7 @@ func (g *Generator) process(items []logs.Item) []logs.Item {
 			}
 
 			delete(talking, item.ParticipantID)
+		default:
 		}
 	}
 
@@ -83,7 +107,7 @@ func (g *Generator) generateSpeech(talkStartedAt time.Time, item logs.Item) []lo
 		return nil
 	}
 
-	var ret []logs.Item
+	ret := make([]logs.Item, 0, len(speech.Parts))
 
 	for _, part := range speech.Parts {
 		ret = append(ret, logs.Item{
@@ -101,7 +125,8 @@ func (g *Generator) generateSpeech(talkStartedAt time.Time, item logs.Item) []lo
 }
 
 func (g *Generator) fillNames(items []logs.Item) []logs.Item {
-	names := make(map[uint64]string)
+	names := make(map[logs.ParticipantID]string)
+
 	for _, item := range items {
 		if item.DisplayName == "" {
 			continue
