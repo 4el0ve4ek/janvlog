@@ -450,8 +450,11 @@ function registerUsername() {
 				request: "join",
 				room: myroom,
 				ptype: "publisher",
-				display: username
+				display: username,
+				metadata: collectUserMetadata()
 			};
+			hideUserMetadata();
+			
 			myusername = escapeXmlTags(username);
 			sfutest.send({ message: register });
 		}
@@ -1202,4 +1205,53 @@ function deleteRoomOnLeave(callback) {
 
 function trim(s){ 
 	return ( s || '' ).replace( /^\s+|\s+$/g, '' ); 
+}
+
+function addMetadataField() {
+	let btn = $("#addMetadata");
+	let rootRow = btn.parent().parent().parent();
+	let newRow = rootRow.clone();
+	btn.remove();
+
+	if ($(".metadata-row").length == 5) {
+		return;
+	}
+
+	newRow.find("input").each(function (_, i) { i.value = "" });
+	rootRow.after(newRow);
+
+	var del = document.createElement('button');
+	del.innerText = "Delete";
+	del.className = "btn btn-outline-danger";
+	del.addEventListener("click", function() {
+		rootRow.remove();
+	});
+
+	rootRow.find("input").last().after(del);
+
+}
+
+function collectUserMetadata() {
+	let ret = new Map();
+
+	$(".metadata-row").each(function () {
+		let key = trim($(this).find("input").first().val());
+		let value = trim($(this).find("input").last().val());
+
+		if (key && value && key.length > 0 && value.length > 0) {
+			ret.set(key, value);
+		}
+	});
+
+	ret.set("user-agent", navigator.userAgent);
+	ret.set("platform", navigator.userAgentData.platform)
+
+	return ret;
+}
+
+function hideUserMetadata() {
+	$(".metadata-row").each(function () {
+		$(this).find("button").remove()
+		$(this).find("input").each(function () { $(this).attr('disabled', true) });
+	});
 }

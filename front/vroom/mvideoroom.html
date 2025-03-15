@@ -63,19 +63,35 @@
 						the demo.</p>
 						<p>Press the <code>Start</code> button above to launch the demo.</p>
 					</div>
-				</div>
-			</div> -->
+				</div>  -->
+			</div>
 			<div class="container mt-4 hide" id="videojoin">
 				<div class="row">
 					<div class="col-md-12" id="controls">
 						<div class="input-group mt-3 mb-1">
 							<span class="input-group-text"><i class="fa-solid fa-calendar"></i></span>
-							<input class="form-control" type="text" list="roomList" id="roomInput" autocomplete="off" placeholder="" />
+							<input class="form-control" type="text" list="roomList" id="roomInput" autocomplete="off" placeholder="Enter or choose room by name " />
 							<datalist id="roomList">
+								<option value="1">One</option>
 							</datalist>
 						</div>
 					</div>
 				</div>
+
+				<div class="row metadata-row">
+					<div class="col-md-12">
+						<div class="input-group mt-3 mb-1">
+							<!-- <span class="input-group-text"><i class="fa-solid fa-calendar"></i></span> -->
+							<input class="form-control" type="text" class="userMetadataKey" autocomplete="off" placeholder="mail/work/etc" />
+							<input class="form-control" type="text" class="userMetadataValue" autocomplete="off" placeholder="example@mail.ru/something/etc" />
+							<!-- <datalist id="roomList">
+								<option value="1">One</option>
+							</datalist> -->
+							<button class="btn btn-outline-primary" autocomplete="off" id="addMetadata" onclick="addMetadataField()">Add</button>
+						</div>
+					</div>
+				</div>
+
 				<!-- TODO add metas -->
 				<div class="row">
 					<span class="badge bg-info" id="you"></span>
