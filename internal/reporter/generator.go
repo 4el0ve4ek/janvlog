@@ -45,7 +45,11 @@ func (g *Generator) StartProcessing(rawLog string) {
 		resItems := g.process(items)
 		resItems = g.fillNames(resItems)
 
-		storage, err := logs.NewStorage(filepath.Join("logs", "processed", path.Base(rawLog)))
+		if len(resItems) == 0 {
+			return
+		}
+
+		storage, err := logs.NewStorage(filepath.Join("logs", "processed", resItems[0].RoomID.String(), path.Base(rawLog)))
 		if err != nil {
 			log.Println("error creating storage", err)
 		}
@@ -56,7 +60,11 @@ func (g *Generator) StartProcessing(rawLog string) {
 		message := templator.GenerateHTML(resItems)
 		fmt.Println(string(message))
 
-		err = g.mail.SendHTML("aksenoff.dany@yandex.ru", fmt.Sprintf("Generated remort for room - %v ", resItems[0].RoomID.String()), message)
+		err = g.mail.SendHTML(
+			"aksenoff.dany@yandex.ru",
+			fmt.Sprintf("Generated report for room - %v ", resItems[0].RoomID.String()),
+			message,
+		)
 		if err != nil {
 			log.Println("error sending email", err)
 		}

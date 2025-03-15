@@ -77,9 +77,21 @@ func (s *storage) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	err := s.file.Close()
+	if err != nil {
+		return xerrors.Wrap(err, "close file")
+	}
+
+	if len(s.items) == 0 {
+		err := os.Remove(s.file.Name())
+		if err != nil {
+			return xerrors.Wrap(err, "remove empty log file")
+		}
+	}
+
 	s.items = nil
 
-	return s.file.Close() //nolint:wrapcheck
+	return nil
 }
 
 func (s *storage) File() string {

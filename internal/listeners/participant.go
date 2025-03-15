@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
@@ -29,7 +31,12 @@ func newParticipant(
 		return nil, xerrors.Wrap(err, "janus.VideoroomHandle")
 	}
 
-	trackRecorder := &trackRecorder{prefix: displayName, filename: "", mu: sync.RWMutex{}}
+	trackRecorder := &trackRecorder{
+		room:        roomID.String(),
+		displayName: displayName,
+		filename:    "",
+		mu:          sync.RWMutex{},
+	}
 
 	peerConnection, err := startPeerConnection(handle, roomID, participantID, trackRecorder)
 	if err != nil {
@@ -245,9 +252,10 @@ func processOffer(peerConnection *webrtc.PeerConnection, offer webrtc.SessionDes
 }
 
 type trackRecorder struct {
-	prefix   string
-	filename string
-	mu       sync.RWMutex
+	room        string
+	displayName string
+	filename    string
+	mu          sync.RWMutex
 }
 
 func (r *trackRecorder) setName(name string) {
@@ -267,8 +275,13 @@ func (r *trackRecorder) getName() string {
 func (r *trackRecorder) Record() func(track *webrtc.TrackRemote, _ *webrtc.RTPReceiver) {
 	return func(track *webrtc.TrackRemote, _ *webrtc.RTPReceiver) {
 		codec := track.Codec()
-		name := "output_" + r.prefix + "_" + strconv.FormatInt(time.Now().Unix(), 10)
+		name := fmt.Sprintf("logs/audio/%s/%s/%s", r.room, r.displayName, strconv.FormatInt(time.Now().Unix(), 10))
 		suffix := ""
+
+		err := os.MkdirAll(filepath.Dir(name), 0777)
+		if err != nil {
+			slog.Error("os.MkdirAll", slog.Any("err", err))
+		}
 
 		defer func() {
 			if suffix == "" {
@@ -279,7 +292,7 @@ func (r *trackRecorder) Record() func(track *webrtc.TrackRemote, _ *webrtc.RTPRe
 			newName := name + "_" + strconv.FormatInt(time.Now().Unix(), 10) + suffix
 
 			if err := os.Rename(oldName, newName); err != nil {
-				fmt.Println(err)
+				slog.Error("os.Rename", slog.Any("err", err))
 			}
 
 			r.setName(newName)
@@ -288,7 +301,7 @@ func (r *trackRecorder) Record() func(track *webrtc.TrackRemote, _ *webrtc.RTPRe
 		if codec.MimeType == "audio/opus" {
 			suffix = ".ogg"
 
-			fmt.Println("Got Opus track, saving to disk as " + name + suffix)
+			slog.Info("Got Opus track, saving to disk as " + name + suffix)
 
 			i, oggNewErr := oggwriter.New(name+suffix, codec.ClockRate, codec.Channels)
 			if oggNewErr != nil {
@@ -297,7 +310,7 @@ func (r *trackRecorder) Record() func(track *webrtc.TrackRemote, _ *webrtc.RTPRe
 
 			saveToDisk(i, track)
 		} else if track.Kind() == webrtc.RTPCodecTypeAudio {
-			fmt.Println("Got audio track but not opus", codec.MimeType)
+			slog.Info("Got audio track but not opus " + codec.MimeType)
 		}
 	}
 }

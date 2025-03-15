@@ -24,7 +24,7 @@ func newRoom(roomID logs.RoomID, handle *janus.Handle, janusClient *janus.Client
 		janusClient:  janusClient,
 		closer:       xasync.NewCloser(),
 		wg:           &sync.WaitGroup{},
-		lw:           generics.Must(logs.NewStorage("logs/raw/room-" + strconv.Itoa(int(roomID)) + "_" + strconv.Itoa(int(time.Now().Unix())))),
+		lw:           generics.Must(logs.NewStorage("logs/raw/room-" + strconv.Itoa(int(roomID)) + "/" + strconv.Itoa(int(time.Now().Unix())))),
 	}
 
 	ret.wg.Add(1)
@@ -63,8 +63,7 @@ func (l *room) watchParticipants() {
 		}
 
 		// log.Println(string(PairFirst(json.MarshalIndent(lst.PluginData.Data, "", "\t"))))
-		participants := lst.PluginData.Data["participants"].([]any)
-
+		participants, _ := lst.PluginData.Data["participants"].([]any)
 		roomMemberIDs := make([]logs.ParticipantID, 0, len(participants))
 
 		for _, participant := range participants {
@@ -200,5 +199,5 @@ func (l *room) generateReport() {
 
 	l.reporter.StartProcessing(l.lw.File())
 
-	l.lw = generics.Must(logs.NewStorage("logs/raw/room-" + strconv.Itoa(int(l.roomID)) + "_" + strconv.Itoa(int(time.Now().Unix()))))
+	l.lw = generics.Must(logs.NewStorage("logs/raw/room-" + strconv.Itoa(int(l.roomID)) + "/" + strconv.Itoa(int(time.Now().Unix()))))
 }

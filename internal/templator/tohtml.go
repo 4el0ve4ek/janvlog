@@ -29,8 +29,8 @@ func GenerateHTML(items []logs.Item) []byte {
 
 func GenerateEventsHTML(res *bytes.Buffer, roomID string, items []logs.Item) []byte {
 	res.WriteString(`<h2>Room id is ` + roomID + `. List of Events: </h2>`)
-	res.WriteString(`<ul>`)
 
+	res.WriteString(`<ul>`)
 	for _, item := range items {
 		res.WriteString(`<li>`)
 		res.WriteString(item.Time.Format(time.TimeOnly))

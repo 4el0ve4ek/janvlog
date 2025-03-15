@@ -26,13 +26,13 @@ func (w *whisperTimestampdClient) Process(fname string) (Response, error) {
 		return Response{}, xerrors.Wrap(err, "http.NewRequestWithContext")
 	}
 
-	pwd, err := os.Executable()
+	pwd, err := os.Getwd()
 	if err != nil {
-		return Response{}, xerrors.Wrap(err, "os.Executable")
+		return Response{}, xerrors.Wrap(err, "os.Getwd")
 	}
 
 	cgi := req.URL.Query()
-	cgi.Set("audio", filepath.Join(filepath.Dir(pwd), fname))
+	cgi.Set("audio", filepath.Join(pwd, fname))
 	req.URL.RawQuery = cgi.Encode()
 
 	rawResponse, err := http.DefaultClient.Do(req)
