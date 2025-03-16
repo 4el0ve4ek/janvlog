@@ -66,12 +66,20 @@ func (l *Videoroom) watchRooms() {
 
 		rooms := lst.PluginData.Data["list"].([]any)
 		for _, room := range rooms {
-			roomID := logs.RoomID(room.(map[string]interface{})["room"].(float64))
+			roomT := room.(map[string]interface{})
+			roomID := logs.RoomID(roomT["room"].(float64))
+			roomName := roomT["description"].(string)
 
 			_, ok := l.rooms[roomID]
 			if !ok {
 				fmt.Println("New room", roomID)
-				l.rooms[roomID] = newRoom(roomID, l.handle, l.janusClient, l.reporter)
+				l.rooms[roomID] = newRoom(
+					roomID,
+					roomName,
+					l.handle,
+					l.janusClient,
+					l.reporter,
+				)
 			}
 		}
 	}

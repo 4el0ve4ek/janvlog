@@ -44,9 +44,6 @@ func newParticipant(
 	}
 
 	ret := &participant{
-		roomID:        roomID,
-		participantID: participantID,
-		displayName:   displayName,
 		handle:        handle,
 		pc:            peerConnection,
 		closer:        xasync.NewCloser(),
@@ -59,9 +56,6 @@ func newParticipant(
 }
 
 type participant struct {
-	roomID        logs.RoomID
-	participantID logs.ParticipantID
-	displayName   string
 	handle        *janus.Handle
 	pc            *webrtc.PeerConnection
 	closer        xasync.Closer

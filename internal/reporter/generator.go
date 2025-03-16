@@ -60,9 +60,11 @@ func (g *Generator) StartProcessing(rawLog string) {
 		message := templator.GenerateHTML(resItems)
 		fmt.Println(string(message))
 
+		mails := unique(append(g.collectMails(resItems), "aksenoff.dany@yandex.ru"))
+
 		err = g.mail.SendHTML(
-			"aksenoff.dany@yandex.ru",
-			fmt.Sprintf("Generated report for room - %v ", resItems[0].RoomID.String()),
+			mails,
+			fmt.Sprintf("Generated report for room - %s (%s) ", resItems[0].RoomName, resItems[0].RoomID.String()),
 			message,
 		)
 		if err != nil {
@@ -133,19 +135,51 @@ func (g *Generator) generateSpeech(talkStartedAt time.Time, item logs.Item) []lo
 }
 
 func (g *Generator) fillNames(items []logs.Item) []logs.Item {
-	names := make(map[logs.ParticipantID]string)
+	names := make(map[logs.ParticipantID]logs.UserData)
 
 	for _, item := range items {
 		if item.DisplayName == "" {
 			continue
 		}
 
-		names[item.ParticipantID] = item.DisplayName
+		names[item.ParticipantID] = logs.UserData{
+			DisplayName: item.DisplayName,
+			Metadata:    item.Metadata,
+		}
 	}
 
 	for i, item := range items {
-		items[i].DisplayName = names[item.ParticipantID]
+		items[i].DisplayName = names[item.ParticipantID].DisplayName
+		items[i].Metadata = names[item.ParticipantID].Metadata
 	}
 
 	return items
+}
+
+func (g *Generator) collectMails(items []logs.Item) []string {
+	ret := make([]string, 0)
+
+	for _, item := range items {
+		if item.Metadata["mail"] != "" {
+			ret = append(ret, item.Metadata["mail"])
+		}
+	}
+
+	return ret
+}
+
+func unique[T comparable](arr []T) []T {
+	ret := make([]T, 0)
+	uniqs := make(map[T]struct{})
+
+	for _, item := range arr {
+		if _, ok := uniqs[item]; ok {
+			continue
+		}
+
+		ret = append(ret, item)
+		uniqs[item] = struct{}{}
+	}
+
+	return ret
 }

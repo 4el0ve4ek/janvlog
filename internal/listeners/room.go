@@ -15,11 +15,18 @@ import (
 	"janvlog/internal/reporter"
 )
 
-func newRoom(roomID logs.RoomID, handle *janus.Handle, janusClient *janus.Client, reporter *reporter.Generator) *room {
+func newRoom(
+	roomID logs.RoomID,
+	roomName string,
+	handle *janus.Handle,
+	janusClient *janus.Client,
+	reporter *reporter.Generator,
+) *room {
 	ret := &room{
 		reporter:     reporter,
 		handle:       handle,
 		roomID:       roomID,
+		roomName:     roomName,
 		participants: make(map[logs.ParticipantID]*participant),
 		janusClient:  janusClient,
 		closer:       xasync.NewCloser(),
@@ -36,6 +43,7 @@ func newRoom(roomID logs.RoomID, handle *janus.Handle, janusClient *janus.Client
 type room struct {
 	handle       *janus.Handle
 	roomID       logs.RoomID
+	roomName     string
 	participants map[logs.ParticipantID]*participant
 	janusClient  *janus.Client
 
@@ -72,13 +80,19 @@ func (l *room) watchParticipants() {
 			pid := logs.ParticipantID(participantT["id"].(float64))
 			isActive := participantT["publisher"].(bool)
 			displayName := participantT["display"].(string)
+			metadata, _ := participantT["metadata"].(map[string]string)
+
+			userData := logs.UserData{
+				DisplayName: displayName,
+				Metadata:    metadata,
+			}
 
 			roomMemberIDs = append(roomMemberIDs, pid)
 
 			if !isActive {
-				l.processNotActive(pid, displayName)
+				l.processNotActive(pid, userData)
 			} else {
-				l.processActive(pid, displayName)
+				l.processActive(pid, userData)
 			}
 		}
 
@@ -91,10 +105,12 @@ func (l *room) watchParticipants() {
 
 				l.lw.Add(logs.Item{
 					RoomID:        l.roomID,
+					RoomName:      l.roomName,
 					ParticipantID: pid,
 					DisplayName:   "",
 					Message:       logs.MessageLeft,
 					AudioFile:     participant.GetAudioFileName(),
+					Metadata:      nil,
 				})
 			}
 		}
@@ -122,7 +138,7 @@ func (l *room) Close() error {
 	return errors.Join(errs...)
 }
 
-func (l *room) processActive(pid logs.ParticipantID, displayName string) {
+func (l *room) processActive(pid logs.ParticipantID, userData logs.UserData) {
 	participant, wasConnected := l.participants[pid]
 	if wasConnected && participant != nil {
 		return
@@ -131,7 +147,7 @@ func (l *room) processActive(pid logs.ParticipantID, displayName string) {
 	log.Println("in room ", l.roomID, "new participant: ", pid)
 
 	participant, err := newParticipant(
-		l.roomID, pid, displayName,
+		l.roomID, pid, userData.DisplayName,
 		l.janusClient,
 	)
 	if err != nil {
@@ -148,22 +164,26 @@ func (l *room) processActive(pid logs.ParticipantID, displayName string) {
 
 	l.lw.Add(logs.Item{
 		RoomID:        l.roomID,
+		RoomName:      l.roomName,
 		ParticipantID: pid,
-		DisplayName:   displayName,
 		Message:       msg,
+		DisplayName:   userData.DisplayName,
+		Metadata:      userData.Metadata,
 	})
 }
 
-func (l *room) processNotActive(pid logs.ParticipantID, displayName string) {
+func (l *room) processNotActive(pid logs.ParticipantID, userData logs.UserData) {
 	participant, ok := l.participants[pid]
 	if !ok {
 		l.participants[pid] = nil
 
 		l.lw.Add(logs.Item{
 			RoomID:        l.roomID,
+			RoomName:      l.roomName,
 			ParticipantID: pid,
-			DisplayName:   displayName,
 			Message:       logs.MessageJoinedWithoutCam,
+			DisplayName:   userData.DisplayName,
+			Metadata:      userData.Metadata,
 		})
 
 		return
@@ -182,17 +202,20 @@ func (l *room) processNotActive(pid logs.ParticipantID, displayName string) {
 
 	l.lw.Add(logs.Item{
 		RoomID:        l.roomID,
+		RoomName:      l.roomName,
 		ParticipantID: pid,
-		DisplayName:   displayName,
 		Message:       logs.MessageDisableCamera,
 		AudioFile:     participant.trackRecorder.getName(),
+		DisplayName:   userData.DisplayName,
+		Metadata:      userData.Metadata,
 	})
 }
 
 func (l *room) generateReport() {
 	l.lw.Add(logs.Item{
-		RoomID:  l.roomID,
-		Message: logs.MessageEmptyRoom,
+		RoomID:   l.roomID,
+		RoomName: l.roomName,
+		Message:  logs.MessageEmptyRoom,
 	})
 
 	l.lw.Close()

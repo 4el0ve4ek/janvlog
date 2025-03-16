@@ -18,13 +18,20 @@ func (id ParticipantID) String() string {
 }
 
 type Item struct {
-	RoomID        RoomID        `json:"RoomID"`
-	ParticipantID ParticipantID `json:"ParticipantID"`
-	DisplayName   string        `json:"DisplayName"`
-	Time          time.Time     `json:"Time"`
-	Message       Message       `json:"Message"`
-	AudioFile     string        `json:"AudioFile,omitempty"`
-	Speech        string        `json:"Speech,omitempty"`
+	RoomID        RoomID            `json:"RoomID"`
+	RoomName      string            `json:"RoomName"`
+	ParticipantID ParticipantID     `json:"ParticipantID"`
+	DisplayName   string            `json:"DisplayName"`
+	Time          time.Time         `json:"Time"`
+	Message       Message           `json:"Message"`
+	AudioFile     string            `json:"AudioFile,omitempty"`
+	Speech        string            `json:"Speech,omitempty"`
+	Metadata      map[string]string `json:"Metadata,omitempty"`
+}
+
+type UserData struct {
+	DisplayName string            `json:"display_name"`
+	Metadata    map[string]string `json:"metadata"`
 }
 
 type Message string
