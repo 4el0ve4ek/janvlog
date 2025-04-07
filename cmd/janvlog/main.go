@@ -24,7 +24,7 @@ func main() {
 	const host = "84.201.174.125"
 
 	reporter := reporter.NewGenerator(
-		stt.NewWhisperTimestampdClient("http://localhost:8080/transcribe"),
+		stt.NewWhisperTimestampdClient("http://"+host+":8080/transcribe"),
 		mail.NewSender(mail.Config{
 			Host:     "smtp.yandex.ru",
 			Port:     587,

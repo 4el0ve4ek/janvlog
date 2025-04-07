@@ -13,26 +13,49 @@ func GenerateHTML(items []logs.Item) []byte {
 
 	var report bytes.Buffer
 
-	report.WriteString(`<!DOCTYPE html>`)
+	report.WriteString("<!DOCTYPE html>")
 	report.WriteString(`<html lang="en">`)
-	report.WriteString(`<body>`)
+	report.WriteString("<body>")
 
 	for roomID, roomEvents := range byRoomEvents {
 		GenerateEventsHTML(&report, roomID.String(), roomEvents)
 	}
 
-	report.WriteString(`</body>`)
-	report.WriteString(`</html>`)
+	report.WriteString("</body>")
+	report.WriteString("</html>")
 
 	return report.Bytes()
 }
 
 func GenerateEventsHTML(res *bytes.Buffer, roomID string, items []logs.Item) []byte {
-	res.WriteString(`<h2>Room id is ` + roomID + `. List of Events: </h2>`)
+	res.WriteString("<h2>Room id is " + roomID + ". Participants: </h2>")
 
-	res.WriteString(`<ul>`)
+	uniqueParticipants := make(map[string]struct{})
+	res.WriteString("<ul>\n")
 	for _, item := range items {
-		res.WriteString(`<li>`)
+		if _, ok := uniqueParticipants[item.DisplayName]; ok {
+			continue
+		}
+		if item.Message != logs.MessageJoined && item.Message != logs.MessageJoinedWithoutCam {
+			continue
+		}
+
+		res.WriteString("<li>\n")
+		res.WriteString(item.DisplayName)
+		res.WriteString("(")
+		res.WriteString("platform: " + item.Metadata["platform"].(string))
+		res.WriteString(", useragent: " + item.Metadata["user-agent"].(string))
+		res.WriteString(")")
+		res.WriteString("\n</li>\n")
+
+	}
+	res.WriteString("</ul>\n")
+
+	res.WriteString("<h2> List of Events: </h2>\n")
+
+	res.WriteString("<ul>\n")
+	for _, item := range items {
+		res.WriteString("<li>\n")
 		res.WriteString(item.Time.Format(time.TimeOnly))
 		res.WriteRune(' ')
 
@@ -47,11 +70,11 @@ func GenerateEventsHTML(res *bytes.Buffer, roomID string, items []logs.Item) []b
 			res.WriteString(string(item.Message))
 		}
 
-		res.WriteString(`</li>`)
+		res.WriteString("\n</li>\n")
 	}
 
-	res.WriteString(`</ul>`)
-	res.WriteString(`</div>`)
+	res.WriteString("</ul>\n")
+	res.WriteString("</div>\n")
 
 	return res.Bytes()
 }
@@ -64,25 +87,3 @@ func groupby[T any, K comparable](items []T, key func(T) K) map[K][]T {
 
 	return result
 }
-
-// <div id="log-viewer">
-// <h2>Room id is 1234. List of Events: </h2>
-// <ul>
-// <li>17:53:51.447 danya1: joined without camera</li>
-// <li>17:53:53.612 danya1: enable camera</li>
-// <li>17:53:55.152 danya1:  Привет! Раз, два, три, четыре, пять. Я иду искать.</li>
-// <li>17:54:19.029 notDanya: joined without camera</li>
-// <li>17:54:20.192 notDanya: enable camera</li>
-// <li>17:54:21.052 notDanya:  5 раз 4-5 снова</li>
-// <li>17:54:27.392 notDanya:  Я тебя побиваю, не говори вместе со мной</li>
-// <li>17:54:28.432 danya1:  Я тебя побиваю, не говори ко мне со мной. Я ухожу, мне может сбегать за чем-то.</li>
-// <li>17:54:31.292 notDanya:  Я ухожу, мне нужно сбегать за чем-то</li>
-// <li>17:54:36.449 danya1: disable camera</li>
-// <li>17:54:36.712 notDanya:  А он мне это нашел, пока</li>
-// <li>17:54:42.551 notDanya: left</li>
-// <li>17:54:46.755 danya1: enable camera</li>
-// <li>17:54:46.755 danya1:  а тут больше нет и его я ухожу</li>
-// <li>17:54:51.840 danya1: left</li>
-// <li>17:54:51.840 : every one left</li>
-// </ul>
-// </div>

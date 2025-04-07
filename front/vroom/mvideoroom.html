@@ -81,12 +81,20 @@
 				<div class="row metadata-row">
 					<div class="col-md-12">
 						<div class="input-group mt-3 mb-1">
+							<span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
+							<input class="form-control userMetadataKey" type="hidden" autocomplete="off" value="mail" />
+							<input class="form-control userMetadataValue" type="text" autocomplete="off" placeholder="example@mail.ru/something/etc" />
+							<!-- <button class="btn btn-outline-primary" autocomplete="off" id="addMetadata" onclick="addMetadataField()">Add</button> -->
+						</div>
+					</div>
+				</div>
+
+				<div class="row metadata-row">
+					<div class="col-md-12">
+						<div class="input-group mt-3 mb-1">
 							<!-- <span class="input-group-text"><i class="fa-solid fa-calendar"></i></span> -->
-							<input class="form-control" type="text" class="userMetadataKey" autocomplete="off" placeholder="mail/work/etc" />
-							<input class="form-control" type="text" class="userMetadataValue" autocomplete="off" placeholder="example@mail.ru/something/etc" />
-							<!-- <datalist id="roomList">
-								<option value="1">One</option>
-							</datalist> -->
+							<input class="form-control userMetadataKey" type="text" autocomplete="off" placeholder="additional info tag (work/experience/home)" disabled/>
+							<input class="form-control userMetadataValue" type="text" autocomplete="off" placeholder="text value" disabled/>
 							<button class="btn btn-outline-primary" autocomplete="off" id="addMetadata" onclick="addMetadataField()">Add</button>
 						</div>
 					</div>

@@ -80,7 +80,7 @@ func (l *room) watchParticipants() {
 			pid := logs.ParticipantID(participantT["id"].(float64))
 			isActive := participantT["publisher"].(bool)
 			displayName := participantT["display"].(string)
-			metadata, _ := participantT["metadata"].(map[string]string)
+			metadata := participantT["metadata"].(map[string]any)
 
 			userData := logs.UserData{
 				DisplayName: displayName,

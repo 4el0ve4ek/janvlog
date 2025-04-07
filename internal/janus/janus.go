@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"janvlog/internal/libs/generics"
 	"janvlog/internal/libs/xerrors"
+	"log/slog"
 
 	janus "github.com/notedit/janus-go"
 )
@@ -17,6 +18,8 @@ func New(wshost string) (*Client, error) {
 	if err != nil {
 		return nil, xerrors.Wrap(err, "janus.Connect")
 	}
+
+	slog.Info("successfully connected to janus via websocket")
 
 	// Create session
 	session, err := gateway.Create()

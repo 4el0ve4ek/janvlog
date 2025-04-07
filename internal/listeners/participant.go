@@ -145,7 +145,7 @@ func startPeerConnection(handle *janus.Handle, roomID logs.RoomID, participantID
 		return nil, xerrors.Wrap(err, "create offer")
 	}
 
-	peerConnection, err := createPeerConnection(trackRecorder)
+	peerConnection, err := createPeerConnection(trackRecorder.Record())
 	if err != nil {
 		return nil, xerrors.Wrap(err, "create peer connection")
 	}
@@ -186,7 +186,7 @@ func createOffer(msg *janus.EventMsg) (webrtc.SessionDescription, error) {
 	}, nil
 }
 
-func createPeerConnection(trackRecorder *trackRecorder) (*webrtc.PeerConnection, error) {
+func createPeerConnection(onTrackFunc func(*webrtc.TrackRemote, *webrtc.RTPReceiver)) (*webrtc.PeerConnection, error) {
 	peerConnection, err := webrtc.NewPeerConnection(webrtc.Configuration{
 		ICEServers: []webrtc.ICEServer{
 			{
@@ -215,7 +215,7 @@ func createPeerConnection(trackRecorder *trackRecorder) (*webrtc.PeerConnection,
 		fmt.Printf("Connection State has changed %s \n", connectionState.String())
 	})
 
-	peerConnection.OnTrack(trackRecorder.Record())
+	peerConnection.OnTrack(onTrackFunc)
 
 	return peerConnection, nil
 }

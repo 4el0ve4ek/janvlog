@@ -455,6 +455,7 @@ function registerUsername() {
 			};
 			hideUserMetadata();
 			
+			console.log("register = ", register);
 			myusername = escapeXmlTags(username);
 			sfutest.send({ message: register });
 		}
@@ -1213,12 +1214,10 @@ function addMetadataField() {
 	let newRow = rootRow.clone();
 	btn.remove();
 
-	if ($(".metadata-row").length == 5) {
-		return;
+	if ($(".metadata-row").length < 5) {
+		newRow.find("input").each(function (_, i) { i.value = "" });
+		rootRow.after(newRow);
 	}
-
-	newRow.find("input").each(function (_, i) { i.value = "" });
-	rootRow.after(newRow);
 
 	var del = document.createElement('button');
 	del.innerText = "Delete";
@@ -1227,24 +1226,25 @@ function addMetadataField() {
 		rootRow.remove();
 	});
 
+	rootRow.find(".userMetadataKey").removeAttr('disabled');
+	rootRow.find(".userMetadataValue").removeAttr('disabled');
 	rootRow.find("input").last().after(del);
-
 }
 
 function collectUserMetadata() {
-	let ret = new Map();
+	let ret = new Object();
 
 	$(".metadata-row").each(function () {
 		let key = trim($(this).find("input").first().val());
 		let value = trim($(this).find("input").last().val());
 
 		if (key && value && key.length > 0 && value.length > 0) {
-			ret.set(key, value);
+			ret[key] = value;
 		}
 	});
 
-	ret.set("user-agent", navigator.userAgent);
-	ret.set("platform", navigator.userAgentData.platform)
+	ret["user-agent"] = navigator.userAgent;
+	ret["platform"] = navigator.userAgentData.platform;
 
 	return ret;
 }

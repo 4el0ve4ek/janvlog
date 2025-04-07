@@ -58,7 +58,7 @@ func (s *Sender) SendHTML(
 		s.cfg.Host+":"+strconv.Itoa(s.cfg.Port),
 		auth,
 		s.cfg.From,
-		toEmails,
+		pass,
 		message.Bytes(),
 	)
 	if err != nil {

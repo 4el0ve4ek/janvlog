@@ -160,8 +160,8 @@ func (g *Generator) collectMails(items []logs.Item) []string {
 	ret := make([]string, 0)
 
 	for _, item := range items {
-		if item.Metadata["mail"] != "" {
-			ret = append(ret, item.Metadata["mail"])
+		if mail, ok := item.Metadata["mail"].(string); ok && mail != "" {
+			ret = append(ret, mail)
 		}
 	}
 
