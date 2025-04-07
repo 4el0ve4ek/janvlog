@@ -3,7 +3,7 @@ import whisper_timestamped as whisper
 import uvicorn
 from fastapi import FastAPI
 
-model = whisper.load_model("small") # ?
+model = whisper.load_model("turbo")
 
 app = FastAPI()
 @app.post("/transcribe")

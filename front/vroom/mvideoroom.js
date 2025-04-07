@@ -1243,8 +1243,8 @@ function collectUserMetadata() {
 		}
 	});
 
-	ret["user-agent"] = navigator.userAgent;
-	ret["platform"] = navigator.userAgentData.platform;
+	ret["user-agent"] = navigator.userAgent ?? "";
+	ret["platform"] = navigator.platform ?? "";
 
 	return ret;
 }

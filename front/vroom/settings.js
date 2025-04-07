@@ -56,7 +56,8 @@ var hostname = "84.201.174.125";
 var server = "https://" + hostname + ":8089/janus";;
 
 server = "http://" + hostname + ":8088/janus";
-	
+if(window.location.protocol === 'https:')
+	 server = "https://" + hostname + ":8089/janus";
 
 // When creating a Janus object, we can also specify which STUN/TURN
 // servers we'd like to use to gather additional candidates. This is
