@@ -28,7 +28,7 @@ func GenerateHTML(items []logs.Item) []byte {
 }
 
 func GenerateEventsHTML(res *bytes.Buffer, roomID string, items []logs.Item) []byte {
-	res.WriteString("<h2>Room id is " + roomID + ". Participants: </h2>")
+	res.WriteString("<h2>Room id is " + roomID + "</h2> <h2> Participants: </h2>")
 
 	uniqueParticipants := make(map[string]struct{})
 	res.WriteString("<ul>\n")
