@@ -2,7 +2,10 @@ module janvlog
 
 go 1.23.4
 
-require github.com/notedit/janus-go v0.0.0-20210115013133-fdce1b146d0e
+require (
+	github.com/domodwyer/mailyak/v3 v3.6.2
+	github.com/notedit/janus-go v0.0.0-20210115013133-fdce1b146d0e
+)
 
 require (
 	github.com/google/uuid v1.6.0 // indirect

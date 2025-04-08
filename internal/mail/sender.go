@@ -8,6 +8,8 @@ import (
 	"net/mail"
 	"net/smtp"
 	"strconv"
+
+	"github.com/domodwyer/mailyak/v3"
 )
 
 var ErrInvalidEmail = errors.New("invalid email")
@@ -31,7 +33,8 @@ type Sender struct {
 func (s *Sender) SendHTML(
 	toEmails []string,
 	title string,
-	body []byte,
+	html []byte,
+	csv []byte,
 ) error {
 	pass, fail := splitBy(toEmails, valid)
 	if len(pass) == 0 {
@@ -40,28 +43,18 @@ func (s *Sender) SendHTML(
 
 	slog.Info("failed mails: ", slog.Any("mails", fail))
 
-	subjectfromto :=
-		"Subject: " + title + "\n" +
-			"From: " + s.cfg.From + "\n"
-		// "To: " + toEmail + "\n"
-	mime := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
-
-	var message bytes.Buffer
-
-	message.WriteString(subjectfromto)
-	message.WriteString(mime)
-	message.Write(body)
-
-	auth := smtp.PlainAuth("", s.cfg.Username, s.cfg.Password, s.cfg.Host)
-
-	err := smtp.SendMail(
+	mail := mailyak.New(
 		s.cfg.Host+":"+strconv.Itoa(s.cfg.Port),
-		auth,
-		s.cfg.From,
-		pass,
-		message.Bytes(),
+		smtp.PlainAuth("", s.cfg.Username, s.cfg.Password, s.cfg.Host),
 	)
-	if err != nil {
+
+	mail.To(pass...)
+	mail.From(s.cfg.From)
+	mail.Subject(title)
+	mail.HTML().Set(string(html))
+	mail.Attach("report.csv", bytes.NewReader(csv))
+
+	if err := mail.Send(); err != nil {
 		return xerrors.Wrap(err, "smtp.SendMail")
 	}
 

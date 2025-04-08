@@ -40,11 +40,14 @@ func GenerateEventsHTML(res *bytes.Buffer, roomID string, items []logs.Item) []b
 			continue
 		}
 
+		platform, _ := item.Metadata["platform"].(string)
+		userAgent, _ := item.Metadata["user-agent"].(string)
+
 		res.WriteString("<li>\n")
 		res.WriteString(item.DisplayName)
 		res.WriteString("(")
-		res.WriteString("platform: " + item.Metadata["platform"].(string))
-		res.WriteString(", useragent: " + item.Metadata["user-agent"].(string))
+		res.WriteString("platform: " + platform)
+		res.WriteString(", useragent: " + userAgent)
 		res.WriteString(")")
 		res.WriteString("\n</li>\n")
 

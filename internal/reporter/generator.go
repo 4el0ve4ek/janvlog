@@ -61,11 +61,13 @@ func (g *Generator) StartProcessing(rawLog string) {
 		fmt.Println(string(message))
 
 		mails := unique(append(g.collectMails(resItems), "aksenoff.dany@yandex.ru"))
+		csv := templator.GenerateCSV(resItems)
 
 		err = g.mail.SendHTML(
 			mails,
 			fmt.Sprintf("Generated report for room - %s (%s) ", resItems[0].RoomName, resItems[0].RoomID.String()),
 			message,
+			csv,
 		)
 		if err != nil {
 			log.Println("error sending email", err)

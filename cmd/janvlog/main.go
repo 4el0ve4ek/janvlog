@@ -21,8 +21,8 @@ func main() {
 		syscall.SIGTERM,
 	)
 
-	// const host = "84.201.174.125"
-	const host = "localhost"
+	const host = "84.201.174.125"
+	// const host = "localhost"
 
 	reporter := reporter.NewGenerator(
 		stt.NewWhisperTimestampdClient("http://"+host+":8080/transcribe"),
