@@ -14,7 +14,7 @@ type Handle = janus.Handle
 type EventMsg = janus.EventMsg
 
 func New(wshost string) (*Client, error) {
-	gateway, err := janus.Connect("ws://" + wshost + ":8188/")
+	gateway, err := janus.Connect("ws://" + wshost + "/")
 	if err != nil {
 		return nil, xerrors.Wrap(err, "janus.Connect")
 	}

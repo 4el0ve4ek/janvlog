@@ -1,0 +1,9 @@
+mail:
+  host: smtp.yandex.ru
+  port: 587
+  from: aksenoff.dany@yandex.ru
+  username: aksenoff.dany
+  passwordfile: "$HOME/.yasmtp"
+
+whispertimestampddomain: http://84.201.174.125:8080
+janusdomain: 84.201.174.125:8188
