@@ -418,78 +418,87 @@ function registerUsername() {
 		// Create fields to register
 		$('#register').click(registerUsername);
 		$('#username').focus();
-	} else {
-		// Try a registration
-		$('#roomInput').attr('disabled', true);
-		$('#username').attr('disabled', true);
-		$('#register').attr('disabled', true).unbind('click');
-		let username = $('#username').val();
-		if(username === "") {
+		return
+	} 
+
+	// Try a registration
+	$('#roomInput').attr('disabled', true);
+	$('#username').attr('disabled', true);
+	$('#register').attr('disabled', true).unbind('click');
+	var rollback = function(warning) {
+		if (warning) {
 			$('#you')
 				.removeClass().addClass('badge bg-warning')
-				.html("Insert your display name (e.g., pippo)");
-			$('#roomInput').removeAttr('disabled');	
-			$('#username').removeAttr('disabled');
-			$('#register').removeAttr('disabled').click(registerUsername);
-			return;
+				.html(warning);
 		}
-		if(/[^a-zA-Z0-9]/.test(username)) {
-			$('#you')
-				.removeClass().addClass('badge bg-warning')
-				.html('Input is not alphanumeric');
-			$('#roomInput').removeAttr('disabled');	
-			$('#username').removeAttr('disabled').val("");
-			$('#register').removeAttr('disabled').click(registerUsername);
-			return;
-		}
-		
-		function join() {
-			console.log("myroom = ", myroom);
+		$('#roomInput').removeAttr('disabled');	
+		$('#username').removeAttr('disabled');
+		$('#register').removeAttr('disabled').click(registerUsername);
+	}
 
-			let register = {
-				request: "join",
-				room: myroom,
-				ptype: "publisher",
-				display: username,
-				metadata: collectUserMetadata()
-			};
-			hideUserMetadata();
-			
-			console.log("register = ", register);
-			myusername = escapeXmlTags(username);
-			sfutest.send({ message: register });
-		}
-		
-		let roomName = $('#roomInput').val();
-		
-		if (roomToIDMapping.has(roomName)) {
-			myroom = roomToIDMapping.get(roomName);
-			join();
-		} else {
-			roomName = trim(roomName)
-			if(/[^a-zA-Z0-9 ]/.test(roomName) || roomName === "") {
-				$('#you')
-					.removeClass().addClass('badge bg-warning')
-					.html('Room name is not alphanumeric');
-				$('#roomInput').removeAttr('disabled');	
-				$('#username').removeAttr('disabled').val("");
-				$('#register').removeAttr('disabled').click(registerUsername);
-				return;
-			}
+	let username = $('#username').val();
+	if(username === "") {
+		rollback("Пустое имя!");
+		return;
+	}
+	if(validateName(username)) {
+		rollback("Имя содержит некорректные символы. Разрешены русские, английские символы, пробел, дефис, скобки")
+		return;
+	}
 
-			sfutest.send({
-				message: {
-					"request": "create",
-					"description": roomName
-				},
-				success: function(response) {
-					roomToIDMapping.set(roomName, response.room);
-					myroom = response.room;
-					join();
-				}
-			})
+	if (validateEmail()) {
+		rollback("Почта некорректа")
+		return
+	}
+	
+	function join() {
+		console.log("myroom = ", myroom);
+
+		let register = {
+			request: "join",
+			room: myroom,
+			ptype: "publisher",
+			display: username,
+			metadata: collectUserMetadata()
+		};
+		hideUserMetadata();
+		
+		console.log("register = ", register);
+		myusername = escapeXmlTags(username);
+		sfutest.send({ message: register, error: rollback });
+
+		const url = new URL(window.location)
+		if (url.searchParams.get("room") !== myroom) {
+			url.searchParams.set("room", myroom)
+			history.pushState(null, '', url);
 		}
 	}
+	
+	let roomName = $('#roomInput').val();
+	
+	if (roomToIDMapping.has(roomName)) {
+		myroom = roomToIDMapping.get(roomName);
+		join();
+	} else {
+		roomName = trim(roomName)
+		if(/[^a-zA-Z0-9 ]/.test(roomName) || roomName === "") {
+			rollback('Room name is not alphanumeric');
+			return;
+		}
+
+		sfutest.send({
+			message: {
+				"request": "create",
+				"description": roomName
+			},
+			success: function(response) {
+				roomToIDMapping.set(roomName, response.room);
+				myroom = response.room;
+				join();
+			},
+			error: rollback
+		})
+	} 
 }
 
 function publishOwnFeed(useAudio) {
@@ -539,6 +548,7 @@ function publishOwnFeed(useAudio) {
 				} else {
 					bootbox.alert("WebRTC error... " + error.message);
 					$('#publish').removeAttr('disabled').click(function() { publishOwnFeed(true); });
+					$.unblockUI();
 				}
 			}
 		});
@@ -1145,6 +1155,10 @@ function updateRoomList() {
 		success: function(data) {
 			console.log(data);
 			roomToIDMapping.clear();
+			
+			let cgiRoom = Number((new URL(window.location)).searchParams.get("room"));
+			let cgiRoomName = null;
+
 			for (let item of data.list) {
 				var roomName = item.description;
 				
@@ -1160,6 +1174,10 @@ function updateRoomList() {
 
 				console.log(roomName, item.room);
 				roomToIDMapping.set(roomName, item.room);
+
+				if (cgiRoom > 0 && item.room === cgiRoom) {
+					cgiRoomName = roomName
+				}
 			}
 			
 			for (let name of roomToIDMapping.keys()) {
@@ -1167,10 +1185,15 @@ function updateRoomList() {
 				option.value = name;
 				rl.appendChild(option);
 			}
+
+			if (cgiRoomName) {
+				let roomInput = document.getElementById('roomInput');
+				roomInput.setAttribute('value', cgiRoomName);
+			}
 		}
 	})
 }
-
+  
 function deleteRoomOnLeave(callback) {
 	var roomID = myroom;
 	if (!roomID) {
@@ -1254,4 +1277,32 @@ function hideUserMetadata() {
 		$(this).find("button").remove()
 		$(this).find("input").each(function () { $(this).attr('disabled', true) });
 	});
+}
+
+function validateEmail() {
+	var mailField = document.getElementById("mailValue");
+	var isError = (mailField.value !== null && mailField.value.length !== 0 ) && !/^[a-zA-Z0-9_.-]+@[a-zA-Z0-9-]+.[a-zA-Z0-9-.]+$/.test(mailField.value)
+	setError(mailField, isError)
+	return isError
+}
+
+function validateName(username) {
+	username = username ?? $('#username').val();;
+	var isError = (!username || username.length === 0) || /[^a-zA-Z0-9 ()\-а-яА-ЯёЁ]/.test(username)
+	setError(document.getElementById('username'), isError)
+	return isError
+}
+
+function setError(el, isError) {
+	if (isError) {
+		el.classList.add("error")
+	} else {
+		el.classList.remove("error")
+	}
+
+	if ($(".error").length > 0) {
+		$("#register").attr("disabled", true)
+	} else {
+		$("#register").removeAttr("disabled")
+	}
 }

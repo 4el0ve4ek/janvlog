@@ -183,3 +183,16 @@ pre {
 .dropdown:hover .dropdown-btn {
 	background-color: #3e8e41;
 }
+
+.error {
+	border: 2px solid red;
+	border-radius: 4px;
+	box-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+	padding: 5px;
+	transition: all 0.3s ease;
+  }
+  
+  .error:focus {
+	border-color: darkred;
+	box-shadow: 0 0 8px rgba(255, 0, 0, 0.8);
+  }

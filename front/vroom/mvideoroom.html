@@ -14,16 +14,9 @@
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.js"></script>
 <script type="text/javascript" src="settings.js" ></script>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/janus-gateway@1.3.1/npm/src/janus.js" ></script>
+<script type="text/javascript" src="https://unpkg.com/cookielib/src/cookie.js"></script>
 <script type="text/javascript" src="mvideoroom.js"></script>
-<!-- <script>
-	$(function() {
-		$(".fixed-top").load("navbar.html", function() {
-			$(".fixed-top li.dropdown").addClass("active");
-			$(".fixed-top a[href='mvideoroom.html']").addClass("active");
-		});
-		$(".footer").load("../footer.html");
-	});
-</script> -->
+
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/5.3.2/cerulean/bootstrap.min.css" type="text/css"/>
 <link rel="stylesheet" href="./demo.css" type="text/css"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" type="text/css"/>
@@ -31,7 +24,6 @@
 </head>
 <body>
 
-<!-- <a href="https://github.com/meetecho/janus-gateway"><img style="position: absolute; top: 0; left: 0; border: 0; z-index: 2001;" src="../forkme_left_darkblue_121621.png" alt="Fork me on GitHub"></a> -->
 
 <div class="navbar navbar-expand-lg fixed-top navbar-dark bg-primary">
 </div>
@@ -40,30 +32,23 @@
 	<div class="row">
 		<div class="col-md-12">
 			<div class="pb-2 mt-4 mb-2 border-bottom">
-				<h1> Demo for janus logging
+				<h1> Демо протоколирования Janus конференции
 					<button class="btn btn-secondary" autocomplete="off" id="start">Start</button>
 				</h1>
 			</div>
 			<div class="container" id="details">
-				<!-- TODO: Write something -->
-
-				<!-- <div class="row">
+				<div class="row">
 					<div class="col-md-12">
-						<h3>Demo details</h3>
-						<p>This is a variant of the <a href="videoroomtest.html">original VideoRoom demo</a>,
-						but taking advantage of the recently added multistream support to use a
-						single PeerConnection to receive all the contributions, rather than
-						creating a different one for each subscription. Apart from this, the
-						same considerations apply.</p>
-						<p>To use the demo, just insert a username to join the default room that
-						is configured. This will add you to the list of participants, and allow
-						you to automatically send your audio/video frames and receive the other
-						participants' feeds. The other participants will appear in separate
-						panels, whose title will be the names they chose when registering at
-						the demo.</p>
-						<p>Press the <code>Start</code> button above to launch the demo.</p>
+						<p>Данный интерфейс представляет сабой простую систему конференций на основе Janus сервера. 
+						К этому Janus серверу подключено приложение для протоколирования, которое транскрибирует встречу и отправляет результат на указанную почту.
+						Код приложения можно найти тут - <a href="https://github.com/4el0ve4ek/janvlog">https://github.com/4el0ve4ek/janvlog</a></p>
+						<p>Чтобы использовать демо, нажмите кнопку <code>Start</code>. 
+							Дальше выберите комнату или создайте новую(для этого нужно ввести новое название), укажите почту(если нужно)
+							и имя, которое будет видно другим пользователям.
+							Далье можно просто поделится ссылкой бразуера с коллегами/открыти в соседней вкладке и проводить созвон/встречу.
+						</p>
 					</div>
-				</div>  -->
+				</div> 
 			</div>
 			<div class="container mt-4 hide" id="videojoin">
 				<div class="row">
@@ -83,30 +68,27 @@
 						<div class="input-group mt-3 mb-1">
 							<span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
 							<input class="form-control userMetadataKey" type="hidden" autocomplete="off" value="mail" />
-							<input class="form-control userMetadataValue" type="text" autocomplete="off" placeholder="example@mail.ru/something/etc" />
-							<!-- <button class="btn btn-outline-primary" autocomplete="off" id="addMetadata" onclick="addMetadataField()">Add</button> -->
+							<input class="form-control userMetadataValue" id="mailValue" type="text" autocomplete="off" placeholder="example@mail.ru/something/etc" onchange="validateEmail()"/>
 						</div>
 					</div>
 				</div>
 
-				<div class="row metadata-row">
+				<!-- <div class="row metadata-row">
 					<div class="col-md-12">
 						<div class="input-group mt-3 mb-1">
-							<!-- <span class="input-group-text"><i class="fa-solid fa-calendar"></i></span> -->
-							<input class="form-control userMetadataKey" type="text" autocomplete="off" placeholder="additional info tag (work/experience/home)" disabled/>
-							<input class="form-control userMetadataValue" type="text" autocomplete="off" placeholder="text value" disabled/>
+							<input class="form-control userMetadataKey" type="text" autocomplete="off" placeholder="additional info tag (work/experience/home)"/>
+							<input class="form-control userMetadataValue" type="text" autocomplete="off" placeholder="text value"/>
 							<button class="btn btn-outline-primary" autocomplete="off" id="addMetadata" onclick="addMetadataField()">Add</button>
 						</div>
 					</div>
-				</div>
+				</div> -->
 
-				<!-- TODO add metas -->
 				<div class="row">
 					<span class="badge bg-info" id="you"></span>
 					<div class="col-md-12" id="controls">
 						<div class="input-group mt-3 mb-1 hide" id="registernow">
 							<span class="input-group-text"><i class="fa-solid fa-user"></i></span>
-							<input autocomplete="off" class="form-control" type="text" placeholder="Choose a display name" id="username" onkeypress="return checkEnter(this, event);"></input>
+							<input autocomplete="off" class="form-control" type="text" placeholder="Choose a display name" id="username" onkeypress="return checkEnter(this, event);" onchange="validateName()"></input>
 							<span class="input-group-btn">
 								<button class="btn btn-success" autocomplete="off" id="register">Join the room</button>
 							</span>
