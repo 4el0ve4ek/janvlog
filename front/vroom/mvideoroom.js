@@ -441,15 +441,17 @@ function registerUsername() {
 		rollback("Пустое имя!");
 		return;
 	}
-	if(validateName(username)) {
+	if(validateName(true)) {
 		rollback("Имя содержит некорректные символы. Разрешены русские, английские символы, пробел, дефис, скобки")
 		return;
 	}
 
-	if (validateEmail()) {
+	if (validateEmail(true)) {
 		rollback("Почта некорректа")
 		return
 	}
+
+	$('#register').attr('disabled', true).unbind('click');
 	
 	function join() {
 		console.log("myroom = ", myroom);
@@ -1279,21 +1281,21 @@ function hideUserMetadata() {
 	});
 }
 
-function validateEmail() {
+function validateEmail(isRegistering) {
 	var mailField = document.getElementById("mailValue");
 	var isError = (mailField.value !== null && mailField.value.length !== 0 ) && !/^[a-zA-Z0-9_.-]+@[a-zA-Z0-9-]+.[a-zA-Z0-9-.]+$/.test(mailField.value)
-	setError(mailField, isError)
+	setError(mailField, isError, isRegistering)
 	return isError
 }
 
-function validateName(username) {
-	username = username ?? $('#username').val();;
+function validateName(isRegistering) {
+	const username = $('#username').val();
 	var isError = (!username || username.length === 0) || /[^a-zA-Z0-9 ()\-а-яА-ЯёЁ]/.test(username)
-	setError(document.getElementById('username'), isError)
+	setError(document.getElementById('username'), isError, isRegistering)
 	return isError
 }
 
-function setError(el, isError) {
+function setError(el, isError, isRegistering) {
 	if (isError) {
 		el.classList.add("error")
 	} else {
@@ -1302,7 +1304,7 @@ function setError(el, isError) {
 
 	if ($(".error").length > 0) {
 		$("#register").attr("disabled", true)
-	} else {
+	} else if (!!!isRegistering) {
 		$("#register").removeAttr("disabled")
 	}
 }
