@@ -3,6 +3,7 @@ package listeners
 import (
 	"errors"
 	"log"
+	"log/slog"
 	"slices"
 	"strconv"
 	"sync"
@@ -151,7 +152,7 @@ func (l *room) processActive(pid logs.ParticipantID, userData logs.UserData) {
 		l.janusClient,
 	)
 	if err != nil {
-		log.Println(err)
+		slog.Error("create new participant:", slog.Any("error", err))
 		return
 	}
 
@@ -195,7 +196,7 @@ func (l *room) processNotActive(pid logs.ParticipantID, userData logs.UserData) 
 
 	err := participant.Close()
 	if err != nil {
-		log.Println(err)
+		slog.Error("close participant:", slog.Any("error", err))
 	}
 
 	l.participants[pid] = nil

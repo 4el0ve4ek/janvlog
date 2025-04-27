@@ -7,6 +7,7 @@ import (
 	"janvlog/internal/stt"
 	"janvlog/internal/templator"
 	"log"
+	"log/slog"
 	"path"
 	"path/filepath"
 	"slices"
@@ -35,7 +36,7 @@ func (g *Generator) StartProcessing(rawLog string) {
 
 		items, err := logs.ItemsFromStorage(rawLog)
 		if err != nil {
-			log.Println("error reading storage", err)
+			slog.Error("error reading storage: ", slog.Any("error", err))
 		}
 
 		if len(items) == 0 {
@@ -51,7 +52,7 @@ func (g *Generator) StartProcessing(rawLog string) {
 
 		storage, err := logs.NewStorage(filepath.Join("logs", "processed", resItems[0].RoomID.String(), path.Base(rawLog)))
 		if err != nil {
-			log.Println("error creating storage", err)
+			slog.Error("error creating storage: ", slog.Any("error", err))
 		}
 
 		storage.Add(resItems...)
@@ -70,7 +71,7 @@ func (g *Generator) StartProcessing(rawLog string) {
 			csv,
 		)
 		if err != nil {
-			log.Println("error sending email", err)
+			slog.Error("error sending email: ", slog.Any("error", err))
 		}
 	}()
 }
@@ -115,7 +116,7 @@ func (g *Generator) process(items []logs.Item) []logs.Item {
 func (g *Generator) generateSpeech(talkStartedAt time.Time, item logs.Item) []logs.Item {
 	speech, err := g.stt.Process(item.AudioFile)
 	if err != nil {
-		log.Println(err)
+		slog.Error("process audio file via stt:", slog.Any("error", err))
 		return nil
 	}
 
