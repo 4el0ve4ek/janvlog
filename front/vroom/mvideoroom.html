@@ -55,7 +55,7 @@
 					<div class="col-md-12" id="controls">
 						<div class="input-group mt-3 mb-1">
 							<span class="input-group-text"><i class="fa-solid fa-calendar"></i></span>
-							<input class="form-control" type="text" list="roomList" id="roomInput" autocomplete="off" placeholder="Enter or choose room by name " />
+							<input class="form-control" type="text" list="roomList" id="roomInput" autocomplete="off" placeholder="Выберите комнату из списка или введите название новой комнаты" />
 							<datalist id="roomList">
 								<option value="1">One</option>
 							</datalist>
@@ -68,7 +68,7 @@
 						<div class="input-group mt-3 mb-1">
 							<span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
 							<input class="form-control userMetadataKey" type="hidden" autocomplete="off" value="mail" />
-							<input class="form-control userMetadataValue" id="mailValue" type="text" autocomplete="off" placeholder="example@mail.ru/something/etc" onchange="validateEmail()"/>
+							<input class="form-control userMetadataValue" id="mailValue" type="text" autocomplete="off" placeholder="Введите вашу почту" onchange="validateEmail()"/>
 						</div>
 					</div>
 				</div>
@@ -88,7 +88,7 @@
 					<div class="col-md-12" id="controls">
 						<div class="input-group mt-3 mb-1 hide" id="registernow">
 							<span class="input-group-text"><i class="fa-solid fa-user"></i></span>
-							<input autocomplete="off" class="form-control" type="text" placeholder="Choose a display name" id="username" onkeypress="return checkEnter(this, event);" onchange="validateName()"></input>
+							<input autocomplete="off" class="form-control" type="text" placeholder="Введите ваше имя" id="username" onkeypress="return checkEnter(this, event);" onchange="validateName()"></input>
 							<span class="input-group-btn">
 								<button class="btn btn-success" autocomplete="off" id="register">Join the room</button>
 							</span>
@@ -107,7 +107,7 @@
 											<button id="bitrateset" autocomplete="off" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
 												Bandwidth
 											</button>
-											<ul id="bitrate" class="dropdown-menu" role="menu">
+											<!-- <ul id="bitrate" class="dropdown-menu" role="menu">
 												<a class="dropdown-item" href="#" id="0">No limit</a>
 												<a class="dropdown-item" href="#" id="128">Cap to 128kbit</a>
 												<a class="dropdown-item" href="#" id="256">Cap to 256kbit</a>
@@ -115,7 +115,7 @@
 												<a class="dropdown-item" href="#" id="1024">Cap to 1mbit</a>
 												<a class="dropdown-item" href="#" id="1500">Cap to 1.5mbit</a>
 												<a class="dropdown-item" href="#" id="2000">Cap to 2mbit</a>
-											</ul>
+											</ul> -->
 										</div>
 									</div>
 								</span>
@@ -124,17 +124,17 @@
 						</div>
 					</div>
 					<div class="col-md-4">
-						<div class="card">
+						<div class="card hide">
 							<div class="card-header">
-								<span class="card-title">Remote Video #1 <span class="badge bg-info hide" id="remote1"></span></span>
+								<span class="card-title"> <span class="badge bg-info hide" id="remote1"></span></span>
 							</div>
 							<div class="card-body relative" id="videoremote1"></div>
 						</div>
 					</div>
 					<div class="col-md-4">
-						<div class="card">
+						<div class="card hide">
 							<div class="card-header">
-								<span class="card-title">Remote Video #2 <span class="badge bg-info hide" id="remote2"></span></span>
+								<span class="card-title"> <span class="badge bg-info hide" id="remote2"></span></span>
 							</div>
 							<div class="card-body relative" id="videoremote2"></div>
 						</div>
@@ -142,25 +142,25 @@
 				</div>
 				<div class="row">
 					<div class="col-md-4">
-						<div class="card">
+						<div class="card hide">
 							<div class="card-header">
-								<span class="card-title">Remote Video #3 <span class="badge bg-info hide" id="remote3"></span></span>
+								<span class="card-title"> <span class="badge bg-info hide" id="remote3"></span></span>
 							</div>
 							<div class="card-body relative" id="videoremote3"></div>
 						</div>
 					</div>
 					<div class="col-md-4">
-						<div class="card">
+						<div class="card hide">
 							<div class="card-header">
-								<span class="card-title">Remote Video #4 <span class="badge bg-info hide" id="remote4"></span></span>
+								<span class="card-title"> <span class="badge bg-info hide" id="remote4"></span></span>
 							</div>
 							<div class="card-body relative" id="videoremote4"></div>
 						</div>
 					</div>
 					<div class="col-md-4">
-						<div class="card">
+						<div class="card hide">
 							<div class="card-header">
-								<span class="card-title">Remote Video #5 <span class="badge bg-info hide" id="remote5"></span></span>
+								<span class="card-title"><span class="badge bg-info hide" id="remote5"></span></span>
 							</div>
 							<div class="card-body relative" id="videoremote5"></div>
 						</div>

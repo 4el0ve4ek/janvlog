@@ -503,21 +503,23 @@ function registerUsername() {
 	} 
 }
 
-function publishOwnFeed(useAudio) {
+function publishOwnFeed(useVideo) {
 	// Publish our stream
 	$('#publish').attr('disabled', true).unbind('click');
 
 	// We want sendonly audio and video (uncomment the data track
 	// too if you want to publish via datachannels as well)
 	let tracks = [];
-	if(useAudio)
-		tracks.push({ type: 'audio', capture: true, recv: false });
-	tracks.push({ type: 'video', capture: true, recv: false,
-		// We may need to enable simulcast or SVC on the video track
-		simulcast: doSimulcast,
-		// We only support SVC for VP9 and (still WIP) AV1
-		svc: ((vcodec === 'vp9' || vcodec === 'av1') && doSvc) ? doSvc : null
-	});
+	// if(useAudio)
+	tracks.push({ type: 'audio', capture: true, recv: false });
+	if(useVideo) {
+		tracks.push({ type: 'video', capture: true, recv: false,
+			// We may need to enable simulcast or SVC on the video track
+			simulcast: doSimulcast,
+			// We only support SVC for VP9 and (still WIP) AV1
+			svc: ((vcodec === 'vp9' || vcodec === 'av1') && doSvc) ? doSvc : null
+		});
+	}
 	//~ tracks.push({ type: 'data' });
 
 	sfutest.createOffer(
@@ -526,7 +528,7 @@ function publishOwnFeed(useAudio) {
 			success: function(jsep) {
 				Janus.debug("Got publisher SDP!");
 				Janus.debug(jsep);
-				let publish = { request: "configure", audio: useAudio, video: true };
+				let publish = { request: "configure", audio: true, video: useVideo };
 				// You can force a specific codec to use when publishing by using the
 				// audiocodec and videocodec properties, for instance:
 				// 		publish["audiocodec"] = "opus"
@@ -545,10 +547,10 @@ function publishOwnFeed(useAudio) {
 			},
 			error: function(error) {
 				Janus.error("WebRTC error:", error);
-				if (useAudio) {
+				if (useVideo) {
 					publishOwnFeed(false);
 				} else {
-					bootbox.alert("WebRTC error... " + error.message);
+					bootbox.alert("Нужно обязательно разрешить аудио для проведения демо!");
 					$('#publish').removeAttr('disabled').click(function() { publishOwnFeed(true); });
 					$.unblockUI();
 				}
@@ -625,7 +627,9 @@ function subscribeTo(sources) {
 							feeds[slot] = stream.id;
 							feedStreams[stream.id].slot = slot;
 							feedStreams[stream.id].remoteVideos = 0;
-							$('#remote' + slot).removeClass('hide').html(escapeXmlTags(stream.display)).removeClass('hide');
+							let remoteEl = $('#remote' + slot);
+							remoteEl.removeClass('hide').html(escapeXmlTags(stream.display)).removeClass('hide');
+							remoteEl.closest(".card").removeClass('hide');
 							break;
 						}
 					}
@@ -699,7 +703,9 @@ function subscribeTo(sources) {
 									feeds[slot] = stream.id;
 									feedStreams[stream.id].slot = slot;
 									feedStreams[stream.id].remoteVideos = 0;
-									$('#remote' + slot).removeClass('hide').html(escapeXmlTags(stream.display)).removeClass('hide');
+									let remoteEl = $('#remote' + slot);
+									remoteEl.removeClass('hide').html(escapeXmlTags(stream.display)).removeClass('hide');
+									remoteEl.closest(".card").removeClass('hide');
 									break;
 								}
 							}
@@ -944,7 +950,11 @@ function unsubscribeFrom(id) {
 	if(bitrateTimer[feed.slot])
 		clearInterval(bitrateTimer[feed.slot]);
 	bitrateTimer[feed.slot] = null;
-	$('#remote' + feed.slot).empty().addClass('hide');
+
+	let remoteEl = $('#remote' + feed.slot);
+	remoteEl.empty().addClass('hide');
+	remoteEl.closest(".card").addClass('hide');
+
 	$('#videoremote' + feed.slot).empty();
 	delete simulcastStarted[feed.slot];
 	delete svcStarted[feed.slot];
